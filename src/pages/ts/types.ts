@@ -1,5 +1,3 @@
-import random from 'random';
-
 export class Vector2 {
     public static readonly ZERO: Vector2 = new Vector2(0, 0);
     
