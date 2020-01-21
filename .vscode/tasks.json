@@ -4,37 +4,31 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "webpack --watch",
-            "type": "shell",
-            "command": "webpack",
-            "args": [
-                "--watch"
-            ],
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "typescript",
-            "type": "typescript",
-            "tsconfig": "tsconfig.json",
-            "problemMatcher": [
-                "$tsc"
-            ],
-            "group": "build"
-        },
-        {
             "type": "npm",
-            "script": "start",
-            "problemMatcher": [],
+            "script": "'webpack --watch'",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
+            "problemMatcher": []
+        },
+        {
+            "label": "tsc build",
+            "type": "npm",
+            "script": "'tsc build'",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "type": "npm",
+            "script": "start",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
             "dependsOn": [
-                "typescript"
+                "tsc build"
             ]
         }
     ]

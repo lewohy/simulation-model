@@ -1,6 +1,7 @@
 import { Vector2, Transform } from './types';
+import { CanvasDelegator, Circle, Shape, Quad } from './drawer';
 
-export abstract class Environment {
+export class Environment {
     private tick: number;
     private _time: number;
     private _timeScale: number;
@@ -23,7 +24,7 @@ export abstract class Environment {
         setInterval(() => {
             this.tick += 10;
 
-            if (this.tick > 170 / this.timeScale) {
+            if (this.tick > 16 / this.timeScale) {
                 this.tick = 0;
                 
                 this.unitList.forEach(unit => {
@@ -37,50 +38,51 @@ export abstract class Environment {
      * 해당 환경에 유닛 추가
      * @param unit 
      */
-    public appendUnit(unit: Unit): void {
+    public appendUnit(unit: Unit) {
         unit.onStart();
         this.unitList.push(unit);
     }
 }
 
-export class Unit {
-    private environment: Environment;
-
-    public constructor(environment: Environment) {
-        this.environment = environment;
-    }
-
-    /**
-     * 유닛이 만들어질 때 호출
-     */
-    public onStart(): void {
-
-    }
-
-    /**
-     * 유닛 생성후 170 / timeScale ms 마다 호출
-     */
-    public onUpdate(): void {
-
-    }
-}
-
-/**
- * 모드 시설들의 부모 클래스
- */
-export abstract class Facility extends Unit {
+export abstract class Unit {
     private readonly _transform: Transform;
-    public readonly agentList: Array<Agent>;
-    public inPort: Facility;
-    public outPort: Facility;
+    private environment: Environment;
 
     public get transform(): Transform {
         return this._transform;
     }
 
     public constructor(environment: Environment) {
+        this._transform = new Transform(Vector2.ZERO, new Vector2(10, 10), 0);
+        this.environment = environment;
+    }
+
+    /**
+     * 해당 유닛을 렌더링하는 메소드
+     */
+    public abstract render(canvasDelegator: CanvasDelegator): void;
+
+    /**
+     * 유닛이 만들어질 때 호출
+     */
+    public abstract onStart(): void;
+
+    /**
+     * 유닛 생성후 170 / timeScale ms 마다 호출
+     */
+    public abstract onUpdate(): void;
+}
+
+/**
+ * 모드 시설들의 부모 클래스
+ */
+export abstract class Facility extends Unit {
+    public readonly agentList: Array<Agent>;
+    public inPort: Facility;
+    public outPort: Facility;
+
+    public constructor(environment: Environment) {
         super(environment);
-        this._transform = new Transform(Vector2.ZERO, Vector2.ZERO, 0);
         this.agentList = new Array<Agent>();
     }
 
@@ -122,38 +124,8 @@ export abstract class Facility extends Unit {
 /**
  * 모든 Agent의 부모 클래스
  */
-export class Agent extends Unit {
-    private readonly _transform: Transform;
-
-    public get transform(): Transform {
-        return this._transform;
-    }
-
+export abstract class Agent extends Unit {
     public constructor(environment: Environment) {
         super(environment);
-        this._transform = new Transform(Vector2.ZERO, Vector2.ZERO, 0);
-    }
-}
-
-export class TruckDestination extends Facility {
-
-    public constructor(environment: Environment) {
-        super(environment);
-    }
-
-    /**
-     * 
-     * @override
-     */
-    public onAgentIn(agent: Agent): void {
-
-    }
-
-    /**
-     * 
-     * @override
-     */
-    public onAgentOut(agent: Agent): void {
-
     }
 }

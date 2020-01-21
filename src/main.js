@@ -4,8 +4,8 @@ var electron_1 = require("electron");
 var win = null;
 function createWindow() {
     win = new electron_1.BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1024 + 512,
+        height: 740,
         webPreferences: {
             nodeIntegration: true
         }

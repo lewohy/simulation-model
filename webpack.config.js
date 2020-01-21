@@ -1,9 +1,10 @@
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const path = require('path');
 
 module.exports = {
     mode: 'development',
     entry: {
-        'index': ['./src/pages/ts/index.ts'],
+        'index': ['./src/pages/ts/index.ts', './src/pages/scss/index.scss'],
     },
     output: {
         filename: '[name].bundle.js',
@@ -19,6 +20,12 @@ module.exports = {
         port: 9000,
         open : true
     },
+    resolve: {
+        extensions: [".ts", ".vue", ".js", ".json"],
+        alias: {
+            'vue$': 'vue/dist/vue.esm.js'
+        }
+    },
     module: {
         rules: [
             {
@@ -32,10 +39,16 @@ module.exports = {
             {
                 test: /\.scss$/,
                 use: [
-                  'css-loader',
-                  'sass-loader'
+                    MiniCssExtractPlugin.loader,
+                    'css-loader',
+                    'sass-loader'
                 ]
             }
         ]
-    }
+    },
+    plugins: [
+        new MiniCssExtractPlugin({
+            filename: '[name].bundle.css'
+        })
+    ]
 }

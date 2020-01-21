@@ -1,2 +1,3 @@
-import * as types from './types';
-import * as unit from './unit'
+import { Model } from "./model";
+
+let model = new Model(<HTMLCanvasElement> document.getElementById('simulation-view'));
