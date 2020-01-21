@@ -12,7 +12,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/random": "^2.1.0"
+    "@types/random": "^2.1.0",
+    "random": "^2.1.1"
   },
   "devDependencies": {
     "@types/node": "^12.8.1",

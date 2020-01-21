@@ -9,7 +9,7 @@ export class CanvasDelegator {
 
     public get canvas(): CanvasRenderingContext2D {
         return this._canvas;
-    };
+    }
 
     public constructor(element: HTMLCanvasElement) {
         this.element = element;
@@ -74,8 +74,9 @@ export class CanvasDelegator {
         let convertedScale = this.convertMeterToPixel(circle.transform.scale);
         
         this.canvas.beginPath();
+        this.canvas.ellipse
         this.canvas.ellipse(convertedPosition.x ,convertedPosition.y, convertedScale.x, convertedScale.y, circle.transform.rotation, 0, 2 * Math.PI);
-        this.canvas.stroke();
+        this.canvas.fill();
     }
 
     /**
@@ -98,7 +99,9 @@ export class CanvasDelegator {
         let cameraHeight = this.element.clientHeight / this.zoomSize;
 
         let convertedVector = new Vector2(this.element.clientWidth / 2, this.element.clientHeight / 2);
-        convertedVector = Vector2.add(convertedVector, this.convertMeterToPixel(Vector2.substract(position, this.cameraPosition)));
+        let deltaVector = this.convertMeterToPixel(Vector2.substract(position, this.cameraPosition));
+        deltaVector.y = - deltaVector.y;
+        convertedVector = Vector2.add(convertedVector, deltaVector);
 
         return convertedVector;
     }
@@ -127,7 +130,7 @@ export class CanvasDelegator {
 
         this.element.addEventListener('mousemove', e => {
             if (e.buttons === 1) {
-                this.cameraPosition = Vector2.substract(this.cameraPosition, new Vector2(e.movementX / this.zoomSize, e.movementY / this.zoomSize));
+                this.cameraPosition = Vector2.substract(this.cameraPosition, new Vector2(e.movementX / this.zoomSize, - e.movementY / this.zoomSize));
             }
         });
     }
@@ -137,7 +140,7 @@ export abstract class Picture {
     public color: string;
     public transform: Transform;
 
-    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 1)') {
+    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 0.2)') {
         this.transform = transform;
         this.color = color;
     }
@@ -150,6 +153,10 @@ export abstract class Shape extends Picture {
 export class Font extends Picture {
     public text: string;
     public size: number = 24;
+
+    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 1)') {
+        super(transform, color);
+    }
 }
 
 export class Quad extends Shape {

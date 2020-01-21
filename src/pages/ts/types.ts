@@ -52,3 +52,22 @@ export class Transform {
         this.rotation = rotation;
     }
 }
+
+/**
+ * 트럭 도착 시간에 관한 데이터
+ */
+export class TruckArrivalData {
+    public static readonly TRUCK_KIND_SEA_BULK = 1;
+    public static readonly TRUCK_KIND_TANK_BULK = 2;
+    public static readonly TRUCK_KIND_DOKE = 3;
+
+    public readonly time: number;
+    public readonly kind: number;
+    public isArrived: boolean;
+    
+    public constructor(time: number, kind: number) {
+        this.time = time;
+        this.kind = kind;
+        this.isArrived = false;
+    }
+}

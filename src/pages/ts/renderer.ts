@@ -14,7 +14,7 @@ export class Renderer {
 
     public get environment(): Environment {
         return this._environment;
-    };
+    }
 
     public constructor(environment: Environment, element: HTMLCanvasElement) {
         this._environment = environment;

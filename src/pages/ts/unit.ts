@@ -2,36 +2,43 @@ import { Vector2, Transform } from './types';
 import { CanvasDelegator, Circle, Shape, Quad } from './drawer';
 
 export class Environment {
-    private tick: number;
-    private _time: number;
+    public static readonly EPSILON_DELAY = 5;
+
+    private _tick: number;
+    private _elapsedTime: number;
     private _timeScale: number;
     public readonly unitList: Array<Unit>;
 
-    public get time(): number {
-        return this._time;
-    };
+    public get elapsedTime(): number {
+        return this._elapsedTime;
+    }
 
     public get timeScale(): number {
         return this._timeScale;
-    };
+    }
+
+    public set timeScale(val: number) {
+        this._timeScale = val;
+    }
 
     public constructor() {
-        this.tick = 0;
-        this._time = 0;
+        this._tick = 0;
+        this._elapsedTime = 0;
         this._timeScale = 1;
         this.unitList = new Array<Unit>();
 
         setInterval(() => {
-            this.tick += 10;
-
-            if (this.tick > 16 / this.timeScale) {
-                this.tick = 0;
+            this._tick += Environment.EPSILON_DELAY;
+            this._elapsedTime += Environment.EPSILON_DELAY * this.timeScale;
+            
+            if (this._tick > 17 / this.timeScale) {
+                this._tick = 0;
                 
                 this.unitList.forEach(unit => {
                     unit.onUpdate();
                 });
             }
-        }, 10);
+        }, Environment.EPSILON_DELAY);
     }
 
     /**
@@ -46,7 +53,7 @@ export class Environment {
 
 export abstract class Unit {
     private readonly _transform: Transform;
-    private environment: Environment;
+    protected environment: Environment;
 
     public get transform(): Transform {
         return this._transform;
@@ -91,8 +98,16 @@ export abstract class Facility extends Unit {
      * @param agent 
      */
     public appendAgent(agent: Agent): void {
+        if (agent.currentFacility) {
+            agent.currentFacility.removeAgent(agent);
+            agent.currentFacility.onAgentOut(agent);
+        }
+
         this.agentList.push(agent);
+        
         this.onAgentIn(agent);
+
+        agent.currentFacility = this;
     }
 
     /**
@@ -105,7 +120,7 @@ export abstract class Facility extends Unit {
                 this.agentList.splice(i, 1);
             }
         }
-        this.onAgentIn(agent);
+        this.onAgentOut(agent);
     }
 
     /**
@@ -125,7 +140,19 @@ export abstract class Facility extends Unit {
  * 모든 Agent의 부모 클래스
  */
 export abstract class Agent extends Unit {
+    private _currentFacility: Facility;
+
+    public get currentFacility(): Facility {
+        return this._currentFacility;
+    }
+
+    public set currentFacility(val: Facility) {
+        this._currentFacility = val;
+    }
+
     public constructor(environment: Environment) {
         super(environment);
+
+        this._currentFacility = null;
     }
 }
