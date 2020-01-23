@@ -1,5 +1,6 @@
 import { Vector2, Transform } from './types';
 import { CanvasDelegator, Circle, Shape, Quad } from './drawer';
+import { Component } from './component';
 
 export class Environment {
     public static readonly EPSILON_DELAY = 5;
@@ -7,6 +8,7 @@ export class Environment {
     private _tick: number;
     private _elapsedTime: number;
     private _timeScale: number;
+    private _deltaTime: number;
     public readonly unitList: Array<Unit>;
 
     public get elapsedTime(): number {
@@ -15,6 +17,10 @@ export class Environment {
 
     public get timeScale(): number {
         return this._timeScale;
+    }
+
+    public get deltaTime(): number {
+        return this._deltaTime;
     }
 
     public set timeScale(val: number) {
@@ -29,13 +35,18 @@ export class Environment {
 
         setInterval(() => {
             this._tick += Environment.EPSILON_DELAY;
-            this._elapsedTime += Environment.EPSILON_DELAY * this.timeScale;
+            this._deltaTime = Environment.EPSILON_DELAY * this.timeScale;
+            this._elapsedTime += this.deltaTime;
             
             if (this._tick > 17 / this.timeScale) {
                 this._tick = 0;
                 
                 this.unitList.forEach(unit => {
                     unit.onUpdate();
+
+                    if (unit instanceof Agent) {
+                        unit.applyComponents();
+                    }
                 });
             }
         }, Environment.EPSILON_DELAY);
@@ -53,15 +64,23 @@ export class Environment {
 
 export abstract class Unit {
     private readonly _transform: Transform;
-    protected environment: Environment;
+    protected readonly _environment: Environment;
 
     public get transform(): Transform {
         return this._transform;
     }
 
+    public get environment(): Environment {
+        return this._environment;
+    }
+
     public constructor(environment: Environment) {
         this._transform = new Transform(Vector2.ZERO, new Vector2(10, 10), 0);
-        this.environment = environment;
+        this._environment = environment;
+    }
+
+    public register(): void {
+        this.environment.appendUnit(this);
     }
 
     /**
@@ -141,6 +160,7 @@ export abstract class Facility extends Unit {
  */
 export abstract class Agent extends Unit {
     private _currentFacility: Facility;
+    private readonly componentList: Array<Component>;
 
     public get currentFacility(): Facility {
         return this._currentFacility;
@@ -154,5 +174,16 @@ export abstract class Agent extends Unit {
         super(environment);
 
         this._currentFacility = null;
+        this.componentList = new Array<Component>();
+    }
+
+    public addComponent(component: Component): void {
+        this.componentList.push(component);
+    }
+
+    public applyComponents(): void {
+        this.componentList.forEach(component => {
+            component.do(this);
+        });
     }
 }

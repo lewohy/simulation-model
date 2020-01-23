@@ -3,8 +3,8 @@ import { Environment, Unit, Facility, Agent } from './unit'
 import { CanvasDelegator } from './drawer';
 
 export class Renderer {
-    public static readonly MAX_WIDTH = 1024;
-    public static readonly MAX_HEIGHT = 1024;
+    public static readonly MAX_WIDTH = 1000;
+    public static readonly MAX_HEIGHT = 1000;
 
     private readonly _environment: Environment;
 

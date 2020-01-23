@@ -1,5 +1,6 @@
 import { Vector2, Transform } from './types';
 import { Unit } from './unit';
+import { Renderer } from './renderer';
 
 export class CanvasDelegator {
     private readonly element: HTMLCanvasElement;
@@ -26,13 +27,34 @@ export class CanvasDelegator {
      * @param picture 
      */
     public draw(picture: Picture): void { // ?
-        if (picture instanceof Font) {
+        if (picture instanceof Path) {
+            this.drawPath(picture);
+        } else if (picture instanceof Font) {
             this.drawFont(picture);
         } else if (picture instanceof Quad) {
             this.drawQuad(picture);
         } else if (picture instanceof Circle) {
             this.drawCircle(picture);
         }
+    }
+
+    public drawPath(path: Path): void {
+        this.canvas.fillStyle = path.color;
+        this.canvas.strokeStyle = path.color;
+
+        /*
+        let convertedScale = this.convertMeterToPixel(path.transform.scale);
+        let convertedPosition = this.getRealPixelPosition(path.transform.position);
+        */
+
+        let convertedPointList = path.pointList.map(point => this.getRealPixelPosition(point));
+        
+        this.canvas.beginPath();
+        this.canvas.moveTo(convertedPointList[0].x, convertedPointList[0].y);
+        convertedPointList.forEach(point => {
+            this.canvas.lineTo(point.x, point.y);
+        });
+        this.canvas.stroke();
     }
 
     /**
@@ -56,11 +78,26 @@ export class CanvasDelegator {
      */
     private drawQuad(quad: Quad): void {
         this.canvas.fillStyle = quad.color;
-        
-        let convertedScale = this.convertMeterToPixel(quad.transform.scale);
-        let convertedPosition = Vector2.substract(this.getRealPixelPosition(quad.transform.position), Vector2.division(convertedScale, 2));
 
-        this.canvas.fillRect(convertedPosition.x, convertedPosition.y, convertedScale.x, convertedScale.y);
+       let convertedScale = this.convertMeterToPixel(quad.transform.scale);
+       let convertedPosition = this.getRealPixelPosition(quad.transform.position);
+
+       let theta1 = Math.atan2(convertedScale.x, convertedScale.y);
+       let theta2 = Math.PI - theta1;
+       let radius = convertedScale.y / 2 / Math.cos(theta1);
+
+       let points = new Array<Vector2>();
+       points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta2 + quad.transform.rotation), convertedPosition.y + radius * Math.sin(theta2 + quad.transform.rotation)));
+       points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta2 + quad.transform.rotation), convertedPosition.y + radius * Math.sin(-theta2 + quad.transform.rotation)));
+       points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta1 + quad.transform.rotation), convertedPosition.y + radius * Math.sin(-theta1 + quad.transform.rotation)));
+       points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta1 + quad.transform.rotation), convertedPosition.y + radius * Math.sin(theta1 + quad.transform.rotation)));
+
+       this.canvas.beginPath();
+       this.canvas.moveTo(points[3].x, points[3].y);
+       points.forEach(point => {
+           this.canvas.lineTo(point.x, point.y);
+       });
+       this.canvas.fill();
     }
 
     /**
@@ -117,6 +154,20 @@ export class CanvasDelegator {
         unitList.forEach(unit => {
             unit.render(this);
         });
+
+        for (let i = - Renderer.MAX_WIDTH / 2; i < Renderer.MAX_WIDTH / 2; i += 1) {
+            let path = new Path(new Transform(Vector2.ZERO, Vector2.ZERO), (i % 10 == 0 ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'));
+            path.pointList.push(new Vector2(i, - Renderer.MAX_HEIGHT / 2));
+            path.pointList.push(new Vector2(i, Renderer.MAX_HEIGHT / 2));
+            this.drawPath(path);
+        }
+
+        for (let i = - Renderer.MAX_HEIGHT / 2; i < Renderer.MAX_HEIGHT / 2; i += 1) {
+            let path = new Path(new Transform(Vector2.ZERO, Vector2.ZERO), (i % 10 == 0 ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'));
+            path.pointList.push(new Vector2(- Renderer.MAX_HEIGHT / 2, i));
+            path.pointList.push(new Vector2(Renderer.MAX_HEIGHT / 2, i));
+            this.drawPath(path);
+        }
     }
     
     private setupEvent(): void {
@@ -156,6 +207,16 @@ export class Font extends Picture {
 
     public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 1)') {
         super(transform, color);
+    }
+}
+
+export class Path extends Shape {
+    public readonly pointList: Array<Vector2>;
+
+    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 0.2)') {
+        super(transform, color);
+
+        this.pointList = new Array<Vector2>();
     }
 }
 

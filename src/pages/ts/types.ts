@@ -35,6 +35,12 @@ export class Vector2 {
         this.x = x;
         this.y = y;
     }
+
+    public front(): Vector2 {
+        let vector = new Vector2(this.x, this.y);
+
+        return vector;
+    }
     
 }
 
