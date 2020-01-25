@@ -35,18 +35,18 @@ export class Environment {
 
         setInterval(() => {
             this._tick += Environment.EPSILON_DELAY;
-            this._deltaTime = Environment.EPSILON_DELAY * this.timeScale;
+            this._deltaTime = this.timeScale / 60;
             this._elapsedTime += this.deltaTime;
             
             if (this._tick > 17 / this.timeScale) {
                 this._tick = 0;
                 
                 this.unitList.forEach(unit => {
-                    unit.onUpdate();
-
                     if (unit instanceof Agent) {
                         unit.applyComponents();
                     }
+
+                    unit.onUpdate();
                 });
             }
         }, Environment.EPSILON_DELAY);
@@ -63,8 +63,13 @@ export class Environment {
 }
 
 export abstract class Unit {
+    protected _name: string;
     private readonly _transform: Transform;
     protected readonly _environment: Environment;
+
+    public get name(): string {
+        return this._name;
+    }
 
     public get transform(): Transform {
         return this._transform;
@@ -75,6 +80,7 @@ export abstract class Unit {
     }
 
     public constructor(environment: Environment) {
+        this._name = 'Unit';
         this._transform = new Transform(Vector2.ZERO, new Vector2(10, 10), 0);
         this._environment = environment;
     }
@@ -109,6 +115,8 @@ export abstract class Facility extends Unit {
 
     public constructor(environment: Environment) {
         super(environment);
+
+        this._name = 'Facility';
         this.agentList = new Array<Agent>();
     }
 
@@ -124,9 +132,8 @@ export abstract class Facility extends Unit {
 
         this.agentList.push(agent);
         
-        this.onAgentIn(agent);
-
         agent.currentFacility = this;
+        this.onAgentIn(agent);
     }
 
     /**
@@ -173,12 +180,21 @@ export abstract class Agent extends Unit {
     public constructor(environment: Environment) {
         super(environment);
 
+        this._name = 'Agent';
         this._currentFacility = null;
         this.componentList = new Array<Component>();
     }
 
     public addComponent(component: Component): void {
         this.componentList.push(component);
+    }
+
+    public removeComponent(component: Component): void {
+        for (let i = 0; i < this.componentList.length; i++) {
+            if (this.componentList[i] === component) {
+                this.componentList.splice(i, 1);
+            }
+        }
     }
 
     public applyComponents(): void {

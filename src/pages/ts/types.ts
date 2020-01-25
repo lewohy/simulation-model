@@ -19,6 +19,19 @@ export class Vector2 {
     public static division(a: Vector2, b: number): Vector2 {
         return new Vector2(a.x / b, a.y / b);
     }
+
+    public static lerp(a: Vector2, b: Vector2, c: number): Vector2 {
+        let vector = Vector2.add(a, Vector2.multiply(Vector2.substract(b, a), c));
+
+        return vector;
+    }
+
+    public static inverseLerp(a: Vector2, b: Vector2, c: Vector2): number {
+        let v1 = Vector2.substract(c, a);
+        let v2 = Vector2.substract(b, a);
+
+        return Math.sqrt(v1.sqrMagnitude / v2.sqrMagnitude);
+    }
     
     public x: number;
     public y: number;
@@ -35,13 +48,6 @@ export class Vector2 {
         this.x = x;
         this.y = y;
     }
-
-    public front(): Vector2 {
-        let vector = new Vector2(this.x, this.y);
-
-        return vector;
-    }
-    
 }
 
 /**
@@ -56,6 +62,34 @@ export class Transform {
         this.position = position;
         this.scale = scale;
         this.rotation = rotation;
+    }
+
+    
+    /**
+     * 앞 벡터
+     */
+    public forward(): Vector2 {
+        let vector = new Vector2(Math.cos(this.rotation), Math.sin(this.rotation));
+
+        return vector;
+    }
+    
+    /**
+     * 왼쪽 벡터
+     */
+    public left(): Vector2 {
+        let vector = new Vector2(Math.cos(this.rotation + Math.PI / 2), Math.sin(this.rotation + Math.PI / 2));
+
+        return vector;
+    }
+    
+    /**
+     * 오른쪽 벡터
+     */
+    public right(): Vector2 {
+        let vector = new Vector2(Math.cos(this.rotation - Math.PI / 2), Math.sin(this.rotation - Math.PI / 2));
+
+        return vector;
     }
 }
 

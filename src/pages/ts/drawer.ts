@@ -37,10 +37,30 @@ export class CanvasDelegator {
             this.drawCircle(picture);
         }
     }
+    
+    /**
+     * canvas의 크기 재설정과 각 unit들을 렌더링
+     * @param unitList 
+     */
+    public update(unitList: Array<Unit>): void {
+        this.element.setAttribute('width', this.element.clientWidth.toString());
+        this.element.setAttribute('height', this.element.clientHeight.toString());
 
-    public drawPath(path: Path): void {
+        unitList.forEach(unit => {
+            unit.render(this);
+        });
+
+        this.enableGrid();
+    }
+
+    /**
+     * canvas에 Path를 그림
+     * @param path 
+     */
+    private drawPath(path: Path): void {
         this.canvas.fillStyle = path.color;
         this.canvas.strokeStyle = path.color;
+        this.canvas.lineWidth = path.width * this.zoomSize;
 
         /*
         let convertedScale = this.convertMeterToPixel(path.transform.scale);
@@ -87,10 +107,10 @@ export class CanvasDelegator {
        let radius = convertedScale.y / 2 / Math.cos(theta1);
 
        let points = new Array<Vector2>();
-       points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta2 + quad.transform.rotation), convertedPosition.y + radius * Math.sin(theta2 + quad.transform.rotation)));
-       points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta2 + quad.transform.rotation), convertedPosition.y + radius * Math.sin(-theta2 + quad.transform.rotation)));
-       points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta1 + quad.transform.rotation), convertedPosition.y + radius * Math.sin(-theta1 + quad.transform.rotation)));
-       points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta1 + quad.transform.rotation), convertedPosition.y + radius * Math.sin(theta1 + quad.transform.rotation)));
+       points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta2 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(theta2 + quad.transform.rotation)));
+       points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta2 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(-theta2 + quad.transform.rotation)));
+       points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta1 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(-theta1 + quad.transform.rotation)));
+       points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta1 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(theta1 + quad.transform.rotation)));
 
        this.canvas.beginPath();
        this.canvas.moveTo(points[3].x, points[3].y);
@@ -142,34 +162,30 @@ export class CanvasDelegator {
 
         return convertedVector;
     }
-    
+
     /**
-     * canvas의 크기 재설정과 각 unit들을 렌더링
-     * @param unitList 
+     * 격자 활성화
      */
-    public update(unitList: Array<Unit>): void {
-        this.element.setAttribute('width', this.element.clientWidth.toString());
-        this.element.setAttribute('height', this.element.clientHeight.toString());
+    private enableGrid(): void {
+        // TODO
+        
+        let n = 10;
+        let smallUnit = 1;
+        let bigUnit = smallUnit * 10;
 
-        unitList.forEach(unit => {
-            unit.render(this);
-        });
-
-        for (let i = - Renderer.MAX_WIDTH / 2; i < Renderer.MAX_WIDTH / 2; i += 1) {
-            let path = new Path(new Transform(Vector2.ZERO, Vector2.ZERO), (i % 10 == 0 ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'));
-            path.pointList.push(new Vector2(i, - Renderer.MAX_HEIGHT / 2));
-            path.pointList.push(new Vector2(i, Renderer.MAX_HEIGHT / 2));
+        for (let x = -100; x <= 100; x += smallUnit) {
+            let path = new Path(new Transform(Vector2.ZERO, Vector2.ZERO), 'rgba(0, 0, 0, 0.1)');
+            path.pointList.push(new Vector2(x, -100));
+            path.pointList.push(new Vector2(x, +100));
+            path.width = 1 / this.zoomSize;
             this.drawPath(path);
         }
-
-        for (let i = - Renderer.MAX_HEIGHT / 2; i < Renderer.MAX_HEIGHT / 2; i += 1) {
-            let path = new Path(new Transform(Vector2.ZERO, Vector2.ZERO), (i % 10 == 0 ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'));
-            path.pointList.push(new Vector2(- Renderer.MAX_HEIGHT / 2, i));
-            path.pointList.push(new Vector2(Renderer.MAX_HEIGHT / 2, i));
-            this.drawPath(path);
-        }
+        
     }
     
+    /**
+     * element에 대한 이벤트 설정
+     */
     private setupEvent(): void {
         this.element.addEventListener('wheel', e => {
             this.zoomSize -= e.deltaY / Math.abs(e.deltaY);
@@ -212,11 +228,13 @@ export class Font extends Picture {
 
 export class Path extends Shape {
     public readonly pointList: Array<Vector2>;
+    public width: number;
 
-    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 0.2)') {
+    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 1)') {
         super(transform, color);
 
         this.pointList = new Array<Vector2>();
+        this.width = 1;
     }
 }
 

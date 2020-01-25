@@ -9,7 +9,7 @@ export abstract class Component {
  * 역학 관련 처리를 수행하는 클래스
  */
 export class Dynamics extends Component {
-    public readonly velocity: Vector2;
+    public velocity: Vector2;
 
     public constructor() {
         super();
@@ -18,6 +18,8 @@ export class Dynamics extends Component {
     }
 
     public do(agent: Agent): void {
-        let deltaPosition = new Vector2(this.velocity.x * Math.cos(agent.transform.rotation), this.velocity.y * Math.cos(agent.transform.rotation));
+        let deltaPosition = Vector2.multiply(new Vector2(this.velocity.x, this.velocity.y), agent.environment.deltaTime);
+        
+        agent.transform.position = Vector2.add(agent.transform.position, deltaPosition);
     }
 }
