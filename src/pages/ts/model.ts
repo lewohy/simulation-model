@@ -12,11 +12,20 @@ export class Model {
 
     private truckGenerator: TruckGenerator;
     private truckDestination: TruckDestination;
+    private watingPlace: WaitingPlace;
+    private inGateway: InGateway;
+    private linerPreparationPlace: SeabulkTruckLinerPreparationPlace;
+    private weightMesaurementPlace1: WeightMesaurementPlace;
+    private bulkProductLoadingPlace: BulkProductLoadingPlace;
+    private dockProductLoadingPlace: DockProductLoadingPlace;
+    private weightMesaurementPlace2: WeightMesaurementPlace;
+    private outGateway: OutGateway;
+    private externalDestination: ExternalDestination;
     private truckList: Array<Truck>;
 
     public constructor(elemeht: HTMLCanvasElement) {
         this.environment = new Environment();
-        this.environment.timeScale = 1;
+        this.environment.timeScale = 50;
         this.renderer = new Renderer(this.environment, elemeht);
 
         this.setup();
@@ -24,25 +33,184 @@ export class Model {
 
     private setup(): void {
         this.truckGenerator = new TruckGenerator(this.environment);
-        this.truckGenerator.transform.position = new Vector2(0, -20);
+        this.truckGenerator.transform.position = new Vector2(-20, 0);
 
         this.truckDestination = new TruckDestination(this.environment);
         this.truckDestination.transform.position = new Vector2(0, 0);
 
+        this.watingPlace = new WaitingPlace(this.environment);
+        this.watingPlace.transform.position = new Vector2(100, 0);
 
-        let road1 = new Road(this.environment);
-        road1.pointList.push(new Vector2(0, 0));
-        road1.pointList.push(new Vector2(10, 0));
-        road1.pointList.push(new Vector2(20, 20));
-        road1.pointList.push(new Vector2(30, 10));
-        road1.pointList.push(new Vector2(40, 20));
+        this.inGateway = new InGateway(this.environment);
+        this.inGateway.transform.position = new Vector2(200, 0);
 
-        this.truckGenerator.outPort = this.truckDestination;
-        this.truckDestination.outPort = road1;
+        this.linerPreparationPlace = new SeabulkTruckLinerPreparationPlace(this.environment);
+        this.linerPreparationPlace.transform.position = new Vector2(300, 50);
+
+        this.weightMesaurementPlace1 = new WeightMesaurementPlace(this.environment);
+        this.weightMesaurementPlace1.transform.position = new Vector2(400, 0);
+
+        this.bulkProductLoadingPlace = new BulkProductLoadingPlace(this.environment);
+        this.bulkProductLoadingPlace.transform.position = new Vector2(500, 0);
+
+        this.dockProductLoadingPlace = new DockProductLoadingPlace(this.environment);
+        this.dockProductLoadingPlace.transform.position = new Vector2(500, -50);
+
+        this.weightMesaurementPlace2 = new WeightMesaurementPlace(this.environment);
+        this.weightMesaurementPlace2.transform.position = new Vector2(600, 0);
+
+        this.outGateway = new OutGateway(this.environment);
+        this.outGateway.transform.position = new Vector2(700, 0);
+
+        this.externalDestination = new ExternalDestination(this.environment);
+        this.externalDestination.transform.position = new Vector2(800, 0);
+
+        // 트럭 도착지 -> 대기실
+        let td2wp = new Road(this.environment);
+        {
+            td2wp.pointList.push(this.truckDestination.getSidePosition(0));
+            td2wp.pointList.push(this.watingPlace.getSidePosition(Math.PI));
+            td2wp.portList.push(this.watingPlace);
+        }
+
+        // 대기실 -> 게이트웨이
+        let wp2ig = new Road(this.environment);
+        {
+            wp2ig.pointList.push(this.watingPlace.getSidePosition(0));
+            wp2ig.pointList.push(this.inGateway.getSidePosition(Math.PI));
+            wp2ig.portList.push(this.inGateway);
+        }
+
+        // 게이트웨이 -> 벌크용 무게 측정실1
+        let ig2wmp1 = new Road(this.environment);
+        {
+            ig2wmp1.pointList.push(this.inGateway.getSidePosition(0));
+            ig2wmp1.pointList.push(this.weightMesaurementPlace1.getSidePosition(Math.PI));
+            ig2wmp1.portList.push(this.weightMesaurementPlace1);
+        }
+
+        // 벌크용 무게 측정실1 -> 벌크 제품 적재실
+        let wmp12bplp = new Road(this.environment);
+        {
+            wmp12bplp.pointList.push(this.weightMesaurementPlace1.getSidePosition(0));
+            wmp12bplp.pointList.push(this.bulkProductLoadingPlace.getSidePosition(Math.PI));
+            wmp12bplp.portList.push(this.bulkProductLoadingPlace);
+        }
+
+        // 벌크 제품 적재실 -> 벌크용 무게 측정실2
+        let bplp2wmp2 = new Road(this.environment);
+        {
+            bplp2wmp2.pointList.push(this.bulkProductLoadingPlace.getSidePosition(0));
+            bplp2wmp2.pointList.push(this.weightMesaurementPlace2.getSidePosition(Math.PI));
+            bplp2wmp2.portList.push(this.weightMesaurementPlace2);
+        }
+
+        // 벌크용 무게 측정실2 -> 출구 게이트웨이
+        let wmp22og = new Road(this.environment);
+        {
+            wmp22og.pointList.push(this.weightMesaurementPlace2.getSidePosition(0));
+            wmp22og.pointList.push(this.outGateway.getSidePosition(Math.PI));
+            wmp22og.portList.push(this.outGateway);
+        }
+        // 출구 게이트웨이 -> 외부 목적지
+        let og2ed = new Road(this.environment);
+        {
+            og2ed.pointList.push(this.outGateway.getSidePosition(0));
+            og2ed.pointList.push(this.externalDestination.getSidePosition(Math.PI));
+            og2ed.portList.push(this.externalDestination);
+        }
+        ////////////////////////////////////////////////////////////
+
+        // 게이트웨이 -> 씨벌크용 라이너 준비실
+        let ig2lpp = new Road(this.environment);
+        {
+            let tmp1 = Vector2.add(this.inGateway.getSidePosition(0), new Vector2(0, 3));
+            let tmp2 = this.linerPreparationPlace.getSidePosition(Math.PI);
+            let tmp3 = Vector2.substract(tmp2, tmp1);
+            ig2lpp.pointList.push(tmp1);
+            ig2lpp.pointList.push(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
+            ig2lpp.pointList.push(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
+            ig2lpp.pointList.push(tmp2);
+            ig2lpp.portList.push(this.linerPreparationPlace);
+        }
+
+        // 씨벌크용 라이너 준비실 -> 벌크용 무게 측정실1
+        let lpp2wmp1 = new Road(this.environment);
+        {
+            let tmp1 = this.linerPreparationPlace.getSidePosition(0);
+            let tmp2 = Vector2.add(this.weightMesaurementPlace1.getSidePosition(Math.PI), new Vector2(0, 3));
+            let tmp3 = Vector2.substract(tmp2, tmp1);
+            lpp2wmp1.pointList.push(tmp1);
+            lpp2wmp1.pointList.push(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
+            lpp2wmp1.pointList.push(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
+            lpp2wmp1.pointList.push(tmp2);
+            lpp2wmp1.portList.push(this.weightMesaurementPlace1);
+        }
+
+        ////////////////////////////////////////////////////////////
+
+        // 입구 게이트웨이 -> 도크용 제품 적재실
+        let ig2dplp = new Road(this.environment);
+        {
+            let tmp1 = Vector2.add(this.inGateway.getSidePosition(0), new Vector2(0, -3));
+            let tmp2 = this.dockProductLoadingPlace.getSidePosition(Math.PI);
+            let tmp3 = Vector2.substract(tmp2, tmp1);
+            ig2dplp.pointList.push(tmp1);
+            ig2dplp.pointList.push(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
+            ig2dplp.pointList.push(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
+            ig2dplp.pointList.push(tmp2);
+            ig2dplp.portList.push(this.dockProductLoadingPlace);
+        }
+
+        // 도크용 제품 적재실 -> 출구 게이트웨이
+        let dplp2og = new Road(this.environment);
+        {
+            let tmp1 = this.dockProductLoadingPlace.getSidePosition(0);
+            let tmp2 = Vector2.add(this.outGateway.getSidePosition(Math.PI), new Vector2(0, -3));
+            let tmp3 = Vector2.substract(tmp2, tmp1);
+            dplp2og.pointList.push(tmp1);
+            dplp2og.pointList.push(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
+            dplp2og.pointList.push(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
+            dplp2og.pointList.push(tmp2);
+            dplp2og.portList.push(this.outGateway);
+        }
+
+        this.truckGenerator.portList.push(this.truckDestination);
+        this.truckDestination.portList.push(td2wp);
+        this.watingPlace.portList.push(wp2ig);
+        this.inGateway.portList.push(ig2lpp);
+        this.inGateway.portList.push(ig2wmp1);
+        this.inGateway.portList.push(ig2dplp);
+        this.linerPreparationPlace.portList.push(lpp2wmp1);
+        this.weightMesaurementPlace1.portList.push(wmp12bplp);
+        this.bulkProductLoadingPlace.portList.push(bplp2wmp2);
+        this.weightMesaurementPlace2.portList.push(wmp22og);
+        this.dockProductLoadingPlace.portList.push(dplp2og);
+        this.outGateway.portList.push(og2ed);
 
         this.truckGenerator.register();
         this.truckDestination.register();
-        road1.register();
+        this.watingPlace.register();
+        this.inGateway.register();
+        this.linerPreparationPlace.register();
+        this.weightMesaurementPlace1.register();
+        this.bulkProductLoadingPlace.register();
+        this.dockProductLoadingPlace.register();
+        this.weightMesaurementPlace2.register();
+        this.outGateway.register();
+        this.externalDestination.register();
+
+        td2wp.register();
+        wp2ig.register();
+        ig2wmp1.register();
+        wmp12bplp.register();
+        bplp2wmp2.register();
+        wmp22og.register();
+        og2ed.register();
+        ig2lpp.register();
+        lpp2wmp1.register();
+        ig2dplp.register();
+        dplp2og.register();
     }
 }
 
@@ -65,7 +233,7 @@ class Road extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        
+        agent.transform.position = this.pointList[0];
     }
     
     /**
@@ -88,28 +256,6 @@ class Road extends Facility {
         path.width = laneWidth;
 
         canvasDelegator.draw(path);
-
-        /*
-        for (let i = 0; i < this.backwardLaneCount; i++) {
-            let path = new Path(this.transform, 'rgba(255, 128, 255, 0.4)');
-            this.pointList.forEach(point => {
-                path.pointList.push(Vector2.add(point, Vector2.multiply(point.left(), laneWidth * 0.5)));
-            });
-            path.width = laneWidth;
-
-            canvasDelegator.draw(path);
-        }
-
-        for (let i = 0; i < this.forwardLaneCount; i++) {
-            let path = new Path(this.transform, 'rgba(128, 255, 255, 0.4)');
-            this.pointList.forEach(point => {
-                path.pointList.push(Vector2.add(point, Vector2.multiply(point.right(), laneWidth * 0.5)));
-            });
-            path.width = laneWidth;
-
-            canvasDelegator.draw(path);
-        }
-        */
     }
 
     /**
@@ -186,11 +332,12 @@ class TruckGenerator extends Facility {
     public onStart(): void {
         this.transform.scale = new Vector2(1, 1);
 
+        /*
         let truck = new DockTruck(this.environment);
         truck.register();
-        this.outPort.appendAgent(truck);
-
-        /*
+        this.portList[0].appendAgent(truck);
+        */
+        
         for (let i = 0; i < 162; i++) {
             let timeData = new TruckArrivalData(Math.random() * 720000, TruckArrivalData.TRUCK_KIND_SEA_BULK);
             this.truckArrivalTimeDataList.push(timeData);
@@ -208,14 +355,14 @@ class TruckGenerator extends Facility {
 
         this.truckArrivalTimeDataList = this.truckArrivalTimeDataList.sort((a, b) => {
             return a.time - b.time;
-        });*/
+        });
     }
 
     /**
      * @override
      */
     public onUpdate(): void {
-        /*
+        
         if (this.nextTruckIndex < this.truckArrivalTimeDataList.length) {
             let nextTruckArrivalTimeData = this.truckArrivalTimeDataList[this.nextTruckIndex];
 
@@ -230,12 +377,12 @@ class TruckGenerator extends Facility {
                 }
 
                 truck.register();
-                this.outPort.appendAgent(truck);
+                this.portList[0].appendAgent(truck);
 
                 nextTruckArrivalTimeData.isArrived = true;
                 this.nextTruckIndex++;
             }
-        }*/
+        }
     }
 }
 
@@ -258,7 +405,7 @@ class TruckDestination extends Facility {
         //agent.transform.position = Vector2.add(this.transform.position, randomDeltaPosition);
         //agent.transform.rotation = Math.random() * 2 * Math.PI;
 
-        this.outPort.appendAgent(agent);
+        this.portList[0].appendAgent(agent);
     }
 
     /**
@@ -285,7 +432,397 @@ class TruckDestination extends Facility {
      * @override
      */
     public onStart(): void {
-        this.transform.scale = new Vector2(20, 20)
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
+
+class WaitingPlace extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this._name = 'WaitingPlace';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        this.portList[0].appendAgent(agent);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(canvasDelegator: CanvasDelegator): void {
+        let quad = new Quad(this.transform);
+        canvasDelegator.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = '트럭 대기실';
+        canvasDelegator.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
+
+class InGateway extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this._name = 'Gateway';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        if (agent instanceof SeaBulkTruck) {
+            this.portList[0].appendAgent(agent);
+        } else if (agent instanceof TankBulkTruck) {
+            this.portList[1].appendAgent(agent);
+        } else if (agent instanceof DockTruck) {
+            this.portList[2].appendAgent(agent);
+        }
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(canvasDelegator: CanvasDelegator): void {
+        let quad = new Quad(this.transform);
+        canvasDelegator.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = '게이트웨이';
+        canvasDelegator.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
+
+class OutGateway extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this._name = 'Gateway';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        this.portList[0].appendAgent(agent);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(canvasDelegator: CanvasDelegator): void {
+        let quad = new Quad(this.transform);
+        canvasDelegator.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = '게이트웨이';
+        canvasDelegator.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
+
+class SeabulkTruckLinerPreparationPlace extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this._name = 'LinerPreparationPlace';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        this.portList[0].appendAgent(agent);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(canvasDelegator: CanvasDelegator): void {
+        let quad = new Quad(this.transform);
+        canvasDelegator.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = '씨벌크용 라이너 준비실';
+        canvasDelegator.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
+
+class WeightMesaurementPlace extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this._name = 'WeightMesaurementPlace';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        this.portList[0].appendAgent(agent);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(canvasDelegator: CanvasDelegator): void {
+        let quad = new Quad(this.transform);
+        canvasDelegator.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = '무게 측정실';
+        canvasDelegator.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
+
+class BulkProductLoadingPlace extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this._name = 'BulkProductLoadingPlace';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        this.portList[0].appendAgent(agent);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(canvasDelegator: CanvasDelegator): void {
+        let quad = new Quad(this.transform);
+        canvasDelegator.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = '벌크 제품 적제실';
+        canvasDelegator.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
+
+class DockProductLoadingPlace extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this._name = 'DockProductLoadingPlace';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        this.portList[0].appendAgent(agent);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(canvasDelegator: CanvasDelegator): void {
+        let quad = new Quad(this.transform);
+        canvasDelegator.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = '도크 제품 적재실';
+        canvasDelegator.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
+
+class ExternalDestination extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this._name = 'ExternalDestination';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(canvasDelegator: CanvasDelegator): void {
+        let quad = new Quad(this.transform);
+        canvasDelegator.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = '외부 목적지';
+        canvasDelegator.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
     }
 
     /**
@@ -320,18 +857,30 @@ abstract class Truck extends Agent {
      * @override
      */
     public onUpdate(): void {
-        //console.log(this.currentFacility.name);
-
         if (this.currentFacility instanceof Road) {
             let road = <Road> this.currentFacility;
 
             this.reset();
             
-            if (Vector2.inverseLerp(road.pointList[this.currentRoadIndex], road.pointList[this.currentRoadIndex + 1], this.transform.position) >= 1) {
-                this.currentRoadIndex++;
-                this.transform.position = road.pointList[this.currentRoadIndex];
+            let currentProgress = Vector2.inverseLerp(road.pointList[this.currentRoadIndex], road.pointList[this.currentRoadIndex + 1], this.transform.position);
 
-                this.reset();
+            while (currentProgress >= 1) {
+                currentProgress -= 1;
+                this.currentRoadIndex++;
+
+                if (this.currentRoadIndex === road.pointList.length - 1) {
+                    this.currentRoadIndex = 0;
+                    this.dynamic.velocity = Vector2.ZERO;
+                    road.portList[0].appendAgent(this);
+
+                    break;
+                }
+                currentProgress = currentProgress * Vector2.substract(road.pointList[this.currentRoadIndex - 1], road.pointList[this.currentRoadIndex]).magnitude / Vector2.substract(road.pointList[this.currentRoadIndex], road.pointList[this.currentRoadIndex + 1]).magnitude;
+                
+                if (currentProgress < 1) {
+                    this.transform.position = Vector2.lerp(road.pointList[this.currentRoadIndex], road.pointList[this.currentRoadIndex + 1], currentProgress);
+                    this.reset();
+                }
             }
         }
     }
@@ -344,7 +893,7 @@ abstract class Truck extends Agent {
 
         let angle = road.getRoadAngle(this.currentRoadIndex);
         this.transform.rotation = angle;
-        this.dynamic.velocity = Vector2.multiply(this.transform.forward(), 10);
+        this.dynamic.velocity = Vector2.multiply(this.transform.forward(), 2.7);
     }
 }
 

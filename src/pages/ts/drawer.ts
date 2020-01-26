@@ -17,7 +17,7 @@ export class CanvasDelegator {
         this._canvas = element.getContext('2d');
 
         this.cameraPosition = new Vector2(0, 0);
-        this.zoomSize = 40;
+        this.zoomSize = 10;
 
         this.setupEvent();
     }
@@ -86,8 +86,9 @@ export class CanvasDelegator {
         this.canvas.font = font + 'px';
         let textMatrics = this.canvas.measureText(font.text);
         
-        let convertedScale = new Vector2(textMatrics.width, 0);
-        let convertedPosition = Vector2.substract(this.getRealPixelPosition(font.transform.position), Vector2.division(convertedScale, 2));
+        let convertedScale = new Vector2(textMatrics.width, font.size);
+        let tmpPosition = this.getRealPixelPosition(font.transform.position);
+        let convertedPosition = new Vector2(tmpPosition.x - convertedScale.x / 2, tmpPosition.y);
 
         this.canvas.fillText(font.text, convertedPosition.x, convertedPosition.y);
     }
@@ -168,7 +169,7 @@ export class CanvasDelegator {
      */
     private enableGrid(): void {
         // TODO
-        
+        /*
         let n = 10;
         let smallUnit = 1;
         let bigUnit = smallUnit * 10;
@@ -180,7 +181,7 @@ export class CanvasDelegator {
             path.width = 1 / this.zoomSize;
             this.drawPath(path);
         }
-        
+        */
     }
     
     /**

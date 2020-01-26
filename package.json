@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "webpack --watch": "webpack --watch",
+    "webpack": "webpack",
     "tsc build": "tsc -p ./tsconfig.json",
     "start": "electron ./src/main.js"
   },

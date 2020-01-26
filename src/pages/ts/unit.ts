@@ -81,7 +81,7 @@ export abstract class Unit {
 
     public constructor(environment: Environment) {
         this._name = 'Unit';
-        this._transform = new Transform(Vector2.ZERO, new Vector2(10, 10), 0);
+        this._transform = new Transform(Vector2.ZERO, new Vector2(1, 1), 0);
         this._environment = environment;
     }
 
@@ -110,14 +110,19 @@ export abstract class Unit {
  */
 export abstract class Facility extends Unit {
     public readonly agentList: Array<Agent>;
-    public inPort: Facility;
-    public outPort: Facility;
+    private readonly _portList: Array<Facility>;
+
+    public get portList(): Array<Facility> {
+        return this._portList;
+    }
 
     public constructor(environment: Environment) {
         super(environment);
 
         this._name = 'Facility';
         this.agentList = new Array<Agent>();
+        this._portList = new Array<Facility>();
+        this.transform.scale = new Vector2(20, 20);
     }
 
     /**
@@ -127,11 +132,9 @@ export abstract class Facility extends Unit {
     public appendAgent(agent: Agent): void {
         if (agent.currentFacility) {
             agent.currentFacility.removeAgent(agent);
-            agent.currentFacility.onAgentOut(agent);
         }
 
         this.agentList.push(agent);
-        
         agent.currentFacility = this;
         this.onAgentIn(agent);
     }
@@ -144,9 +147,21 @@ export abstract class Facility extends Unit {
         for (let i = 0; i < this.agentList.length; i++) {
             if (this.agentList[i] === agent) {
                 this.agentList.splice(i, 1);
+                this.onAgentOut(agent);
+                agent.currentFacility = null;
+                break;
             }
         }
-        this.onAgentOut(agent);
+    }
+
+    /**
+     * 옆면 위치 구하기용
+     * @param directrion 0: right, pi: left
+     */
+    public getSidePosition(angle: number): Vector2 {
+        let vector = Vector2.add(this.transform.position, new Vector2(this.transform.scale.x / 2 * Math.cos(angle), this.transform.scale.y / 2 * Math.sin(angle)));
+
+        return vector;
     }
 
     /**
