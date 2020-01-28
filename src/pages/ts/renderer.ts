@@ -6,19 +6,15 @@ export class Renderer {
     public static readonly MAX_WIDTH = 1000;
     public static readonly MAX_HEIGHT = 1000;
 
-    private readonly _environment: Environment;
-
-    private canvasDelegator: CanvasDelegator;
+    public readonly environment: Environment;
+    public readonly canvasDelegator: CanvasDelegator;
+    
     private running: boolean;
     private interval: NodeJS.Timeout;
 
-    public get environment(): Environment {
-        return this._environment;
-    }
-
     public constructor(environment: Environment, element: HTMLCanvasElement) {
-        this._environment = environment;
-        this.canvasDelegator = new CanvasDelegator(element);
+        this.environment = environment;
+        this.canvasDelegator = new CanvasDelegator(environment, element);
 
         this.running = true;
 

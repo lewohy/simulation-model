@@ -7,8 +7,8 @@ import { Vector2, TruckArrivalData } from "./types";
 import { Dynamics } from './component';
 
 export class Model {
-    private readonly environment: Environment;
-    private readonly renderer: Renderer;
+    public readonly environment: Environment;
+    public readonly renderer: Renderer;
 
     private truckGenerator: TruckGenerator;
     private truckDestination: TruckDestination;
@@ -21,11 +21,10 @@ export class Model {
     private weightMesaurementPlace2: WeightMesaurementPlace;
     private outGateway: OutGateway;
     private externalDestination: ExternalDestination;
-    private truckList: Array<Truck>;
 
     public constructor(elemeht: HTMLCanvasElement) {
         this.environment = new Environment();
-        this.environment.timeScale = 50;
+        this.environment.timeScale = 100;
         this.renderer = new Renderer(this.environment, elemeht);
 
         this.setup();
@@ -68,55 +67,55 @@ export class Model {
         // 트럭 도착지 -> 대기실
         let td2wp = new Road(this.environment);
         {
-            td2wp.pointList.push(this.truckDestination.getSidePosition(0));
-            td2wp.pointList.push(this.watingPlace.getSidePosition(Math.PI));
+            td2wp.addPoint(this.truckDestination.getSidePosition(0));
+            td2wp.addPoint(this.watingPlace.getSidePosition(Math.PI));
             td2wp.portList.push(this.watingPlace);
         }
 
         // 대기실 -> 게이트웨이
         let wp2ig = new Road(this.environment);
         {
-            wp2ig.pointList.push(this.watingPlace.getSidePosition(0));
-            wp2ig.pointList.push(this.inGateway.getSidePosition(Math.PI));
+            wp2ig.addPoint(this.watingPlace.getSidePosition(0));
+            wp2ig.addPoint(this.inGateway.getSidePosition(Math.PI));
             wp2ig.portList.push(this.inGateway);
         }
 
         // 게이트웨이 -> 벌크용 무게 측정실1
         let ig2wmp1 = new Road(this.environment);
         {
-            ig2wmp1.pointList.push(this.inGateway.getSidePosition(0));
-            ig2wmp1.pointList.push(this.weightMesaurementPlace1.getSidePosition(Math.PI));
+            ig2wmp1.addPoint(this.inGateway.getSidePosition(0));
+            ig2wmp1.addPoint(this.weightMesaurementPlace1.getSidePosition(Math.PI));
             ig2wmp1.portList.push(this.weightMesaurementPlace1);
         }
 
         // 벌크용 무게 측정실1 -> 벌크 제품 적재실
         let wmp12bplp = new Road(this.environment);
         {
-            wmp12bplp.pointList.push(this.weightMesaurementPlace1.getSidePosition(0));
-            wmp12bplp.pointList.push(this.bulkProductLoadingPlace.getSidePosition(Math.PI));
+            wmp12bplp.addPoint(this.weightMesaurementPlace1.getSidePosition(0));
+            wmp12bplp.addPoint(this.bulkProductLoadingPlace.getSidePosition(Math.PI));
             wmp12bplp.portList.push(this.bulkProductLoadingPlace);
         }
 
         // 벌크 제품 적재실 -> 벌크용 무게 측정실2
         let bplp2wmp2 = new Road(this.environment);
         {
-            bplp2wmp2.pointList.push(this.bulkProductLoadingPlace.getSidePosition(0));
-            bplp2wmp2.pointList.push(this.weightMesaurementPlace2.getSidePosition(Math.PI));
+            bplp2wmp2.addPoint(this.bulkProductLoadingPlace.getSidePosition(0));
+            bplp2wmp2.addPoint(this.weightMesaurementPlace2.getSidePosition(Math.PI));
             bplp2wmp2.portList.push(this.weightMesaurementPlace2);
         }
 
         // 벌크용 무게 측정실2 -> 출구 게이트웨이
         let wmp22og = new Road(this.environment);
         {
-            wmp22og.pointList.push(this.weightMesaurementPlace2.getSidePosition(0));
-            wmp22og.pointList.push(this.outGateway.getSidePosition(Math.PI));
+            wmp22og.addPoint(this.weightMesaurementPlace2.getSidePosition(0));
+            wmp22og.addPoint(this.outGateway.getSidePosition(Math.PI));
             wmp22og.portList.push(this.outGateway);
         }
         // 출구 게이트웨이 -> 외부 목적지
         let og2ed = new Road(this.environment);
         {
-            og2ed.pointList.push(this.outGateway.getSidePosition(0));
-            og2ed.pointList.push(this.externalDestination.getSidePosition(Math.PI));
+            og2ed.addPoint(this.outGateway.getSidePosition(0));
+            og2ed.addPoint(this.externalDestination.getSidePosition(Math.PI));
             og2ed.portList.push(this.externalDestination);
         }
         ////////////////////////////////////////////////////////////
@@ -127,10 +126,10 @@ export class Model {
             let tmp1 = Vector2.add(this.inGateway.getSidePosition(0), new Vector2(0, 3));
             let tmp2 = this.linerPreparationPlace.getSidePosition(Math.PI);
             let tmp3 = Vector2.substract(tmp2, tmp1);
-            ig2lpp.pointList.push(tmp1);
-            ig2lpp.pointList.push(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
-            ig2lpp.pointList.push(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
-            ig2lpp.pointList.push(tmp2);
+            ig2lpp.addPoint(tmp1);
+            ig2lpp.addPoint(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
+            ig2lpp.addPoint(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
+            ig2lpp.addPoint(tmp2);
             ig2lpp.portList.push(this.linerPreparationPlace);
         }
 
@@ -140,10 +139,10 @@ export class Model {
             let tmp1 = this.linerPreparationPlace.getSidePosition(0);
             let tmp2 = Vector2.add(this.weightMesaurementPlace1.getSidePosition(Math.PI), new Vector2(0, 3));
             let tmp3 = Vector2.substract(tmp2, tmp1);
-            lpp2wmp1.pointList.push(tmp1);
-            lpp2wmp1.pointList.push(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
-            lpp2wmp1.pointList.push(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
-            lpp2wmp1.pointList.push(tmp2);
+            lpp2wmp1.addPoint(tmp1);
+            lpp2wmp1.addPoint(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
+            lpp2wmp1.addPoint(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
+            lpp2wmp1.addPoint(tmp2);
             lpp2wmp1.portList.push(this.weightMesaurementPlace1);
         }
 
@@ -155,10 +154,10 @@ export class Model {
             let tmp1 = Vector2.add(this.inGateway.getSidePosition(0), new Vector2(0, -3));
             let tmp2 = this.dockProductLoadingPlace.getSidePosition(Math.PI);
             let tmp3 = Vector2.substract(tmp2, tmp1);
-            ig2dplp.pointList.push(tmp1);
-            ig2dplp.pointList.push(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
-            ig2dplp.pointList.push(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
-            ig2dplp.pointList.push(tmp2);
+            ig2dplp.addPoint(tmp1);
+            ig2dplp.addPoint(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
+            ig2dplp.addPoint(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
+            ig2dplp.addPoint(tmp2);
             ig2dplp.portList.push(this.dockProductLoadingPlace);
         }
 
@@ -168,10 +167,10 @@ export class Model {
             let tmp1 = this.dockProductLoadingPlace.getSidePosition(0);
             let tmp2 = Vector2.add(this.outGateway.getSidePosition(Math.PI), new Vector2(0, -3));
             let tmp3 = Vector2.substract(tmp2, tmp1);
-            dplp2og.pointList.push(tmp1);
-            dplp2og.pointList.push(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
-            dplp2og.pointList.push(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
-            dplp2og.pointList.push(tmp2);
+            dplp2og.addPoint(tmp1);
+            dplp2og.addPoint(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
+            dplp2og.addPoint(new Vector2(tmp1.x + tmp3.x / 3 * 2, tmp2.y));
+            dplp2og.addPoint(tmp2);
             dplp2og.portList.push(this.outGateway);
         }
 
@@ -218,7 +217,9 @@ export class Model {
  * 트럭이 지나다닐 길
  */
 class Road extends Facility {
-    public readonly pointList: Array<Vector2>;
+    public static readonly LANE_WIDTH = 2;
+
+    private readonly pointList: Array<Vector2>;
     public forwardLaneCount = 1;
     public backwardLaneCount = 1;
 
@@ -227,6 +228,7 @@ class Road extends Facility {
 
         this._name = 'Road';
         this.pointList = new Array<Vector2>();
+        this.transform.scale = new Vector2(Road.LANE_WIDTH, Road.LANE_WIDTH);
     }
 
     /**
@@ -247,13 +249,11 @@ class Road extends Facility {
      * @override
      */
     public render(canvasDelegator: CanvasDelegator): void {
-        let laneWidth = 2;
-
         let path = new Path(this.transform, 'rgba(128, 255, 255, 0.4)');
+        path.width = Road.LANE_WIDTH;
         this.pointList.forEach(point => {
             path.pointList.push(point);
         });
-        path.width = laneWidth;
 
         canvasDelegator.draw(path);
     }
@@ -270,6 +270,67 @@ class Road extends Facility {
      */
     public onUpdate(): void {
         
+    }
+
+    /**
+     * point 추가
+     * @param point 
+     */
+    public addPoint(position: Vector2): void {
+        this.pointList.push(position);
+
+        let minX: number = position.x;
+        let minY: number = position.y;
+        let maxX: number = position.x;
+        let maxY: number = position.y;
+
+        this.pointList.forEach(point => {
+            if (point.x < minX) {
+                minX = point.x;
+            }
+
+            if (point.x > maxX) {
+                maxX = point.x;
+            }
+
+            if (point.y < minY) {
+                minY = point.y;
+            }
+
+            if (point.y > maxY) {
+                maxY = point.y;
+            }
+        });
+
+        let lbPosition = new Vector2(minX, minY);
+        let rtPosition = new Vector2(maxX, maxY);
+
+        let tmp = Vector2.substract(rtPosition, lbPosition);
+        this.transform.position = Vector2.add(lbPosition, Vector2.division(tmp, 2));
+        
+        if (tmp.x > Road.LANE_WIDTH) {
+            this.transform.scale.y = tmp.x;
+        }
+        
+        if (tmp.y > Road.LANE_WIDTH) {
+            this.transform.scale.x = tmp.y;
+        }
+    }
+
+    /**
+     * point 반환
+     * @param index 
+     */
+    public getPoint(index: number): Vector2 {
+        return this.pointList[index];
+    }
+
+    /**
+     * point 갯수 반환
+     * @param index 
+     */
+    public getPointLength(): number {
+        return this.pointList.length;
     }
 
     /**
@@ -862,23 +923,23 @@ abstract class Truck extends Agent {
 
             this.reset();
             
-            let currentProgress = Vector2.inverseLerp(road.pointList[this.currentRoadIndex], road.pointList[this.currentRoadIndex + 1], this.transform.position);
+            let currentProgress = Vector2.inverseLerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), this.transform.position);
 
             while (currentProgress >= 1) {
                 currentProgress -= 1;
                 this.currentRoadIndex++;
 
-                if (this.currentRoadIndex === road.pointList.length - 1) {
+                if (this.currentRoadIndex === road.getPointLength() - 1) {
                     this.currentRoadIndex = 0;
                     this.dynamic.velocity = Vector2.ZERO;
                     road.portList[0].appendAgent(this);
 
                     break;
                 }
-                currentProgress = currentProgress * Vector2.substract(road.pointList[this.currentRoadIndex - 1], road.pointList[this.currentRoadIndex]).magnitude / Vector2.substract(road.pointList[this.currentRoadIndex], road.pointList[this.currentRoadIndex + 1]).magnitude;
+                currentProgress = currentProgress * Vector2.substract(road.getPoint(this.currentRoadIndex - 1), road.getPoint(this.currentRoadIndex)).magnitude / Vector2.substract(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1)).magnitude;
                 
                 if (currentProgress < 1) {
-                    this.transform.position = Vector2.lerp(road.pointList[this.currentRoadIndex], road.pointList[this.currentRoadIndex + 1], currentProgress);
+                    this.transform.position = Vector2.lerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), currentProgress);
                     this.reset();
                 }
             }

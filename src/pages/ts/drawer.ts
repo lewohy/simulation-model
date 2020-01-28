@@ -1,18 +1,25 @@
 import { Vector2, Transform } from './types';
-import { Unit } from './unit';
+import { Unit, Environment } from './unit';
 import { Renderer } from './renderer';
 
 export class CanvasDelegator {
+    private readonly environment: Environment;
     private readonly element: HTMLCanvasElement;
     private readonly _canvas: CanvasRenderingContext2D;
     private cameraPosition: Vector2;
     private zoomSize: number;
+    private _focusedUnit: Unit;
 
     public get canvas(): CanvasRenderingContext2D {
         return this._canvas;
     }
 
-    public constructor(element: HTMLCanvasElement) {
+    public get focusedUnit(): Unit {
+        return this._focusedUnit;
+    }
+
+    public constructor(environment: Environment, element: HTMLCanvasElement) {
+        this.environment = environment;
         this.element = element;
         this._canvas = element.getContext('2d');
 
@@ -50,6 +57,10 @@ export class CanvasDelegator {
             unit.render(this);
         });
 
+        if (this.focusedUnit) {
+            this.drawWireframe(this.focusedUnit);
+        }
+
         this.enableGrid();
     }
 
@@ -84,6 +95,7 @@ export class CanvasDelegator {
     private drawFont(font: Font): void {
         this.canvas.fillStyle = font.color;
         this.canvas.font = font + 'px';
+
         let textMatrics = this.canvas.measureText(font.text);
         
         let convertedScale = new Vector2(textMatrics.width, font.size);
@@ -99,26 +111,33 @@ export class CanvasDelegator {
      */
     private drawQuad(quad: Quad): void {
         this.canvas.fillStyle = quad.color;
+        this.canvas.strokeStyle = quad.color;
 
-       let convertedScale = this.convertMeterToPixel(quad.transform.scale);
-       let convertedPosition = this.getRealPixelPosition(quad.transform.position);
+        let convertedScale = this.convertMeterToPixel(quad.transform.scale);
+        let convertedPosition = this.getRealPixelPosition(quad.transform.position);
 
-       let theta1 = Math.atan2(convertedScale.x, convertedScale.y);
-       let theta2 = Math.PI - theta1;
-       let radius = convertedScale.y / 2 / Math.cos(theta1);
+        let theta1 = Math.atan2(convertedScale.x, convertedScale.y);
+        let theta2 = Math.PI - theta1;
+        let radius = convertedScale.y / 2 / Math.cos(theta1);
 
-       let points = new Array<Vector2>();
-       points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta2 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(theta2 + quad.transform.rotation)));
-       points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta2 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(-theta2 + quad.transform.rotation)));
-       points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta1 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(-theta1 + quad.transform.rotation)));
-       points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta1 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(theta1 + quad.transform.rotation)));
+        let points = new Array<Vector2>();
+        points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta2 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(theta2 + quad.transform.rotation)));
+        points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta2 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(-theta2 + quad.transform.rotation)));
+        points.push(new Vector2(convertedPosition.x + radius * Math.cos(-theta1 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(-theta1 + quad.transform.rotation)));
+        points.push(new Vector2(convertedPosition.x + radius * Math.cos(theta1 + quad.transform.rotation), convertedPosition.y - radius * Math.sin(theta1 + quad.transform.rotation)));
 
-       this.canvas.beginPath();
-       this.canvas.moveTo(points[3].x, points[3].y);
-       points.forEach(point => {
-           this.canvas.lineTo(point.x, point.y);
-       });
-       this.canvas.fill();
+        this.canvas.beginPath();
+        this.canvas.moveTo(points[3].x, points[3].y);
+        points.forEach(point => {
+            this.canvas.lineTo(point.x, point.y);
+        });
+
+        if (quad.strokeWidth > 0) {
+            this.canvas.lineWidth = quad.strokeWidth;
+            this.canvas.stroke();
+        } else {
+            this.canvas.fill();
+        }
     }
 
     /**
@@ -127,6 +146,7 @@ export class CanvasDelegator {
      */
     private drawCircle(circle: Circle): void {
         this.canvas.fillStyle = circle.color;
+        this.canvas.strokeStyle = circle.color;
         
         let convertedPosition = this.getRealPixelPosition(circle.transform.position);
         let convertedScale = this.convertMeterToPixel(circle.transform.scale);
@@ -134,7 +154,22 @@ export class CanvasDelegator {
         this.canvas.beginPath();
         this.canvas.ellipse
         this.canvas.ellipse(convertedPosition.x ,convertedPosition.y, convertedScale.x, convertedScale.y, circle.transform.rotation, 0, 2 * Math.PI);
-        this.canvas.fill();
+
+        if (circle.strokeWidth > 0) {
+            this.canvas.lineWidth = circle.strokeWidth;
+            this.canvas.stroke();
+        } else {
+            this.canvas.fill();
+        }
+    }
+
+    /**
+     * 해당 유닛의 와이어프레임을 그림
+     */
+    private drawWireframe(unit: Unit): void {
+        let quad = new Quad(unit.transform, 'rgba(0, 0, 0, 0.5)');
+        quad.strokeWidth = 1;
+        this.draw(quad);
     }
 
     /**
@@ -201,6 +236,20 @@ export class CanvasDelegator {
                 this.cameraPosition = Vector2.substract(this.cameraPosition, new Vector2(e.movementX / this.zoomSize, - e.movementY / this.zoomSize));
             }
         });
+
+        this.element.addEventListener('mousedown', e => {
+            if (e.button === 2) {
+                for (let i = 0; i < this.environment.unitList.length; i++) {
+                    let unit = this.environment.unitList[i];
+                    let convertedPosition = this.getRealPixelPosition(unit.transform.position);
+                    let convertedScale = this.convertMeterToPixel(unit.transform.scale);
+
+                    if (e.offsetX > convertedPosition.x - convertedScale.y / 2 && e.offsetX < convertedPosition.x + convertedScale.y / 2 && e.offsetY > convertedPosition.y - convertedScale.x / 2 && e.offsetY < convertedPosition.y + convertedScale.x / 2) {
+                        this._focusedUnit = unit;
+                    }
+                }
+            }
+        });
     }
 }
 
@@ -215,7 +264,7 @@ export abstract class Picture {
 }
 
 export abstract class Shape extends Picture {
-
+    public strokeWidth: number = 0;
 }
 
 export class Font extends Picture {

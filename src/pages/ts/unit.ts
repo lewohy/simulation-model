@@ -7,7 +7,7 @@ export class Environment {
 
     private _tick: number;
     private _elapsedTime: number;
-    private _timeScale: number;
+    public timeScale: number;
     private _deltaTime: number;
     public readonly unitList: Array<Unit>;
 
@@ -15,22 +15,14 @@ export class Environment {
         return this._elapsedTime;
     }
 
-    public get timeScale(): number {
-        return this._timeScale;
-    }
-
     public get deltaTime(): number {
         return this._deltaTime;
-    }
-
-    public set timeScale(val: number) {
-        this._timeScale = val;
     }
 
     public constructor() {
         this._tick = 0;
         this._elapsedTime = 0;
-        this._timeScale = 1;
+        this.timeScale = 1;
         this.unitList = new Array<Unit>();
 
         setInterval(() => {
@@ -64,15 +56,11 @@ export class Environment {
 
 export abstract class Unit {
     protected _name: string;
-    private readonly _transform: Transform;
+    public readonly transform: Transform;
     protected readonly _environment: Environment;
 
     public get name(): string {
         return this._name;
-    }
-
-    public get transform(): Transform {
-        return this._transform;
     }
 
     public get environment(): Environment {
@@ -81,7 +69,7 @@ export abstract class Unit {
 
     public constructor(environment: Environment) {
         this._name = 'Unit';
-        this._transform = new Transform(Vector2.ZERO, new Vector2(1, 1), 0);
+        this.transform = new Transform(Vector2.ZERO, new Vector2(1, 1), 0);
         this._environment = environment;
     }
 
@@ -110,18 +98,14 @@ export abstract class Unit {
  */
 export abstract class Facility extends Unit {
     public readonly agentList: Array<Agent>;
-    private readonly _portList: Array<Facility>;
-
-    public get portList(): Array<Facility> {
-        return this._portList;
-    }
+    public readonly portList: Array<Facility>;
 
     public constructor(environment: Environment) {
         super(environment);
 
         this._name = 'Facility';
         this.agentList = new Array<Agent>();
-        this._portList = new Array<Facility>();
+        this.portList = new Array<Facility>();
         this.transform.scale = new Vector2(20, 20);
     }
 
@@ -181,22 +165,14 @@ export abstract class Facility extends Unit {
  * 모든 Agent의 부모 클래스
  */
 export abstract class Agent extends Unit {
-    private _currentFacility: Facility;
+    public currentFacility: Facility;
     private readonly componentList: Array<Component>;
-
-    public get currentFacility(): Facility {
-        return this._currentFacility;
-    }
-
-    public set currentFacility(val: Facility) {
-        this._currentFacility = val;
-    }
-
+    
     public constructor(environment: Environment) {
         super(environment);
 
         this._name = 'Agent';
-        this._currentFacility = null;
+        this.currentFacility = null;
         this.componentList = new Array<Component>();
     }
 
