@@ -14,7 +14,8 @@
   "license": "ISC",
   "dependencies": {
     "@types/random": "^2.1.0",
-    "random": "^2.1.1"
+    "random": "^2.1.1",
+    "vue": "^2.6.11"
   },
   "devDependencies": {
     "@types/node": "^12.8.1",
@@ -25,6 +26,9 @@
     "sass-loader": "^8.0.2",
     "ts-loader": "^6.2.1",
     "typescript": "^3.7.5",
+    "vue-loader": "^15.8.3",
+    "vue-style-loader": "^4.1.2",
+    "vue-template-compiler": "^2.6.11",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1"

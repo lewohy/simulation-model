@@ -61,7 +61,7 @@
     // "emitDecoratorMetadata": true,         /* Enables experimental support for emitting type metadata for decorators. */
   },
   "include": [
-    "src/*"
+    "src/*", "src/pages/vue-shims.d.ts", "src/pages/vue-shims.d.ts", "src/vue-shims.d.ts"
   ],
   "exclude": [
     "src/pages/**.*"

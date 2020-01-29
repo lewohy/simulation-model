@@ -2,7 +2,7 @@ import random from 'random';
 
 import { Environment, Facility, Agent } from "./unit"
 import { Renderer } from "./renderer";
-import { Shape, Circle, CanvasDelegator, Font, Quad, Path } from "./drawer";
+import { Shape, Circle, Font, Quad, Path } from "./drawer";
 import { Vector2, TruckArrivalData } from "./types";
 import { Dynamics } from './component';
 
@@ -248,14 +248,14 @@ class Road extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let path = new Path(this.transform, 'rgba(128, 255, 255, 0.4)');
         path.width = Road.LANE_WIDTH;
         this.pointList.forEach(point => {
             path.pointList.push(point);
         });
 
-        canvasDelegator.draw(path);
+        renderer.draw(path);
     }
 
     /**
@@ -378,13 +378,13 @@ class TruckGenerator extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let circle = new Circle(this.transform);
-        canvasDelegator.draw(circle);
+        renderer.draw(circle);
 
         let font = new Font(this.transform);
         font.text = '트럭 생성기';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -480,13 +480,13 @@ class TruckDestination extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '트럭 도착지';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -528,13 +528,13 @@ class WaitingPlace extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '트럭 대기실';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -582,13 +582,13 @@ class InGateway extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '게이트웨이';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -630,13 +630,13 @@ class OutGateway extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '게이트웨이';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -678,13 +678,13 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '씨벌크용 라이너 준비실';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -726,13 +726,13 @@ class WeightMesaurementPlace extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '무게 측정실';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -774,13 +774,13 @@ class BulkProductLoadingPlace extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '벌크 제품 적제실';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -822,13 +822,13 @@ class DockProductLoadingPlace extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '도크 제품 적재실';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -870,13 +870,13 @@ class ExternalDestination extends Facility {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform);
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
 
         let font = new Font(this.transform);
         font.text = '외부 목적지';
-        canvasDelegator.draw(font);
+        renderer.draw(font);
     }
 
     /**
@@ -969,9 +969,9 @@ class SeaBulkTruck extends Truck {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform, 'rgba(256, 0, 0, 0.2)');
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
     }
     
     /**
@@ -1001,9 +1001,9 @@ class TankBulkTruck extends Truck {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform, 'rgba(0, 256, 0, 0.2)');
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
     }
     
     /**
@@ -1033,9 +1033,9 @@ class DockTruck extends Truck {
     /**
      * @override
      */
-    public render(canvasDelegator: CanvasDelegator): void {
+    public render(renderer: Renderer): void {
         let quad = new Quad(this.transform, 'rgba(0, 0, 256, 0.2)');
-        canvasDelegator.draw(quad);
+        renderer.draw(quad);
     }
     
     /**

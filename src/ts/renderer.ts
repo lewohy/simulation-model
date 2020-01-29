@@ -1,18 +1,22 @@
 import { Vector2, Transform } from './types';
-import { Unit, Environment } from './unit';
-import { Renderer } from './renderer';
+import { Environment, Unit, Facility, Agent } from './unit'
+import { Picture, Shape, Circle, Font, Quad, Path } from "./drawer";
 
-export class CanvasDelegator {
-    private readonly environment: Environment;
-    private readonly element: HTMLCanvasElement;
-    private readonly _canvas: CanvasRenderingContext2D;
-    private cameraPosition: Vector2;
-    private zoomSize: number;
+export class Renderer {
+    public static readonly MAX_WIDTH = 1000;
+    public static readonly MAX_HEIGHT = 1000;
+
+    public readonly environment: Environment;
+    public readonly element: HTMLCanvasElement;
+    public readonly interval: NodeJS.Timeout;
+    public readonly canvas: CanvasRenderingContext2D;
+
+    public cameraPosition: Vector2;
+    public zoomSize: number;
+
     private _focusedUnit: Unit;
-
-    public get canvas(): CanvasRenderingContext2D {
-        return this._canvas;
-    }
+    
+    public running: boolean;
 
     public get focusedUnit(): Unit {
         return this._focusedUnit;
@@ -21,12 +25,44 @@ export class CanvasDelegator {
     public constructor(environment: Environment, element: HTMLCanvasElement) {
         this.environment = environment;
         this.element = element;
-        this._canvas = element.getContext('2d');
+        this.canvas = element.getContext('2d');
 
         this.cameraPosition = new Vector2(0, 0);
         this.zoomSize = 10;
 
+        
+        this.running = true;
+
         this.setupEvent();
+
+        this.interval = setInterval(() => {
+            if (this.running) {
+                this.onUpdate();
+            }
+        }, 10);
+    }
+
+    public start(): void {
+        this.running = true;
+    }
+
+    public pause(): void {
+        this.running = false;
+    }
+
+    private onUpdate(): void {
+        this.element.setAttribute('width', this.element.clientWidth.toString());
+        this.element.setAttribute('height', this.element.clientHeight.toString());
+
+        this.environment.unitList.forEach(unit => {
+            unit.render(this);
+        });
+
+        if (this.focusedUnit) {
+            this.drawWireframe(this.focusedUnit);
+        }
+
+        this.enableGrid();
     }
 
     /**
@@ -251,47 +287,4 @@ export class CanvasDelegator {
             }
         });
     }
-}
-
-export abstract class Picture {
-    public color: string;
-    public transform: Transform;
-
-    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 0.2)') {
-        this.transform = transform;
-        this.color = color;
-    }
-}
-
-export abstract class Shape extends Picture {
-    public strokeWidth: number = 0;
-}
-
-export class Font extends Picture {
-    public text: string;
-    public size: number = 24;
-
-    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 1)') {
-        super(transform, color);
-    }
-}
-
-export class Path extends Shape {
-    public readonly pointList: Array<Vector2>;
-    public width: number;
-
-    public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 1)') {
-        super(transform, color);
-
-        this.pointList = new Array<Vector2>();
-        this.width = 1;
-    }
-}
-
-export class Quad extends Shape {
-
-}
-
-export class Circle extends Shape {
-    
 }

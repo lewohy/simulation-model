@@ -1,6 +1,6 @@
 import { Vector2, Transform } from './types';
-import { CanvasDelegator, Circle, Shape, Quad } from './drawer';
 import { Component } from './component';
+import { Renderer } from './renderer';
 
 export class Environment {
     public static readonly EPSILON_DELAY = 5;
@@ -80,7 +80,7 @@ export abstract class Unit {
     /**
      * 해당 유닛을 렌더링하는 메소드
      */
-    public abstract render(canvasDelegator: CanvasDelegator): void;
+    public abstract render(renderer: Renderer): void;
 
     /**
      * 유닛이 만들어질 때 호출
