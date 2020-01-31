@@ -32,36 +32,47 @@ export class Model {
 
     private setup(): void {
         this.truckGenerator = new TruckGenerator(this.environment);
+        this.truckGenerator.name = '트럭 생성기';
         this.truckGenerator.transform.position = new Vector2(-20, 0);
 
         this.truckDestination = new TruckDestination(this.environment);
+        this.truckDestination.name = '트럭 도착지';
         this.truckDestination.transform.position = new Vector2(0, 0);
 
         this.watingPlace = new WaitingPlace(this.environment);
+        this.watingPlace.name = '대기 장소';
         this.watingPlace.transform.position = new Vector2(100, 0);
 
         this.inGateway = new InGateway(this.environment);
+        this.inGateway.name = '입구 게이트웨이';
         this.inGateway.transform.position = new Vector2(200, 0);
 
         this.linerPreparationPlace = new SeabulkTruckLinerPreparationPlace(this.environment);
+        this.linerPreparationPlace.name = '씨벌크용 라이너 준비실';
         this.linerPreparationPlace.transform.position = new Vector2(300, 50);
 
         this.weightMesaurementPlace1 = new WeightMesaurementPlace(this.environment);
+        this.weightMesaurementPlace1.name = '무게 측정실 1';
         this.weightMesaurementPlace1.transform.position = new Vector2(400, 0);
 
         this.bulkProductLoadingPlace = new BulkProductLoadingPlace(this.environment);
+        this.bulkProductLoadingPlace.name = '벌크 제품 적재실';
         this.bulkProductLoadingPlace.transform.position = new Vector2(500, 0);
 
         this.dockProductLoadingPlace = new DockProductLoadingPlace(this.environment);
+        this.dockProductLoadingPlace.name = '도크 제품 적재실';
         this.dockProductLoadingPlace.transform.position = new Vector2(500, -50);
 
         this.weightMesaurementPlace2 = new WeightMesaurementPlace(this.environment);
+        this.weightMesaurementPlace2.name = '무게 측정실 2';
         this.weightMesaurementPlace2.transform.position = new Vector2(600, 0);
 
         this.outGateway = new OutGateway(this.environment);
+        this.outGateway.name = '출구 게이트웨이';
         this.outGateway.transform.position = new Vector2(700, 0);
 
         this.externalDestination = new ExternalDestination(this.environment);
+        this.externalDestination.name = '외부 목적지';
         this.externalDestination.transform.position = new Vector2(800, 0);
 
         // 트럭 도착지 -> 대기실
@@ -220,13 +231,12 @@ class Road extends Facility {
     public static readonly LANE_WIDTH = 2;
 
     private readonly pointList: Array<Vector2>;
-    public forwardLaneCount = 1;
-    public backwardLaneCount = 1;
+    public laneCount = 1;
 
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'Road';
+        this.name = 'Road';
         this.pointList = new Array<Vector2>();
         this.transform.scale = new Vector2(Road.LANE_WIDTH, Road.LANE_WIDTH);
     }
@@ -356,7 +366,7 @@ class TruckGenerator extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'TruckGenerator';
+        this.name = 'TruckGenerator';
         this.truckArrivalTimeDataList = new Array<TruckArrivalData>();
         this.nextTruckIndex = 0;
     }
@@ -383,7 +393,7 @@ class TruckGenerator extends Facility {
         renderer.draw(circle);
 
         let font = new Font(this.transform);
-        font.text = '트럭 생성기';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -454,7 +464,7 @@ class TruckDestination extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'TruckDestination';
+        this.name = 'TruckDestination';
     }
 
     /**
@@ -485,7 +495,7 @@ class TruckDestination extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '트럭 도착지';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -508,7 +518,7 @@ class WaitingPlace extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'WaitingPlace';
+        this.name = 'WaitingPlace';
     }
 
     /**
@@ -533,7 +543,7 @@ class WaitingPlace extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '트럭 대기실';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -556,7 +566,7 @@ class InGateway extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'Gateway';
+        this.name = 'Gateway';
     }
 
     /**
@@ -587,7 +597,7 @@ class InGateway extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '게이트웨이';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -610,7 +620,7 @@ class OutGateway extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'Gateway';
+        this.name = 'Gateway';
     }
 
     /**
@@ -635,7 +645,7 @@ class OutGateway extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '게이트웨이';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -658,7 +668,7 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'LinerPreparationPlace';
+        this.name = 'LinerPreparationPlace';
     }
 
     /**
@@ -683,7 +693,7 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '씨벌크용 라이너 준비실';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -706,7 +716,7 @@ class WeightMesaurementPlace extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'WeightMesaurementPlace';
+        this.name = 'WeightMesaurementPlace';
     }
 
     /**
@@ -731,7 +741,7 @@ class WeightMesaurementPlace extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '무게 측정실';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -754,7 +764,7 @@ class BulkProductLoadingPlace extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'BulkProductLoadingPlace';
+        this.name = 'BulkProductLoadingPlace';
     }
 
     /**
@@ -779,7 +789,7 @@ class BulkProductLoadingPlace extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '벌크 제품 적제실';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -802,7 +812,7 @@ class DockProductLoadingPlace extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'DockProductLoadingPlace';
+        this.name = 'DockProductLoadingPlace';
     }
 
     /**
@@ -827,7 +837,7 @@ class DockProductLoadingPlace extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '도크 제품 적재실';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -850,7 +860,7 @@ class ExternalDestination extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'ExternalDestination';
+        this.name = this.name;
     }
 
     /**
@@ -875,7 +885,7 @@ class ExternalDestination extends Facility {
         renderer.draw(quad);
 
         let font = new Font(this.transform);
-        font.text = '외부 목적지';
+        font.text = this.name;
         renderer.draw(font);
     }
 
@@ -905,7 +915,7 @@ abstract class Truck extends Agent {
     public constructor(environment: Environment) {
         super(environment);
         
-        this._name = 'Truck';
+        this.name = 'Truck';
 
         this.transform.scale = new Vector2(Truck.WIDTH, Truck.LENGTH);
         
@@ -963,7 +973,7 @@ class SeaBulkTruck extends Truck {
     public constructor(environment: Environment) {
         super(environment);
         
-        this._name = 'SeaBulkTruck';
+        this.name = 'SeaBulkTruck';
     }
 
     /**
@@ -995,7 +1005,7 @@ class TankBulkTruck extends Truck {
     public constructor(environment: Environment) {
         super(environment);
         
-        this._name = 'TankBulkTruck';
+        this.name = 'TankBulkTruck';
     }
 
     /**
@@ -1027,7 +1037,7 @@ class DockTruck extends Truck {
     public constructor(environment: Environment) {
         super(environment);
         
-        this._name = 'DockTruck';
+        this.name = 'DockTruck';
     }
 
     /**

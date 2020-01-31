@@ -2,7 +2,7 @@
     <div id="app">
         <canvas id="simulation-view"></canvas>
 
-        <property-editor id="property-editor" :model="model" :a="a"></property-editor>
+        <property-editor id="property-editor" :model="model"></property-editor>
     </div>
 </template>
 <script lang="ts">
@@ -13,20 +13,13 @@ import { Model } from "../ts/model";
 let simulationModel: Model;
 
 export default Vue.extend({
-    data: function() {
-        return {
-            model: null,
-            a: {
-                b: {
-                    c: {
-                        d: 0
-                    }
-                }
-            }
-        };
-    },
     components: {
         PropertyEditor
+    },
+    data: function() {
+        return {
+            model: null
+        };
     },
     mounted: function() {
         this.model = new Model(<HTMLCanvasElement> document.getElementById('simulation-view'));

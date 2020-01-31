@@ -55,20 +55,16 @@ export class Environment {
 }
 
 export abstract class Unit {
-    protected _name: string;
+    public name: string;
     public readonly transform: Transform;
     protected readonly _environment: Environment;
-
-    public get name(): string {
-        return this._name;
-    }
 
     public get environment(): Environment {
         return this._environment;
     }
 
     public constructor(environment: Environment) {
-        this._name = 'Unit';
+        this.name = 'Unit';
         this.transform = new Transform(Vector2.ZERO, new Vector2(1, 1), 0);
         this._environment = environment;
     }
@@ -103,7 +99,7 @@ export abstract class Facility extends Unit {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'Facility';
+        this.name = 'Facility';
         this.agentList = new Array<Agent>();
         this.portList = new Array<Facility>();
         this.transform.scale = new Vector2(20, 20);
@@ -171,7 +167,7 @@ export abstract class Agent extends Unit {
     public constructor(environment: Environment) {
         super(environment);
 
-        this._name = 'Agent';
+        this.name = 'Agent';
         this.currentFacility = null;
         this.componentList = new Array<Component>();
     }
