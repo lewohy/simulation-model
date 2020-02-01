@@ -14,12 +14,12 @@ export class Renderer {
     public cameraPosition: Vector2;
     public zoomSize: number;
 
-    private _focusedUnit: Unit;
+    private _focused: any;
     
     public running: boolean;
 
-    public get focusedUnit(): Unit {
-        return this._focusedUnit;
+    public get focused(): any {
+        return this._focused;
     }
 
     public constructor(environment: Environment, element: HTMLCanvasElement) {
@@ -58,8 +58,8 @@ export class Renderer {
             unit.render(this);
         });
 
-        if (this.focusedUnit) {
-            this.drawWireframe(this.focusedUnit);
+        if (this.focused instanceof Unit) {
+            this.drawWireframe(this.focused);
         }
 
         this.enableGrid();
@@ -79,25 +79,6 @@ export class Renderer {
         } else if (picture instanceof Circle) {
             this.drawCircle(picture);
         }
-    }
-    
-    /**
-     * canvas의 크기 재설정과 각 unit들을 렌더링
-     * @param unitList 
-     */
-    public update(unitList: Array<Unit>): void {
-        this.element.setAttribute('width', this.element.clientWidth.toString());
-        this.element.setAttribute('height', this.element.clientHeight.toString());
-
-        unitList.forEach(unit => {
-            unit.render(this);
-        });
-
-        if (this.focusedUnit) {
-            this.drawWireframe(this.focusedUnit);
-        }
-
-        this.enableGrid();
     }
 
     /**
@@ -240,19 +221,6 @@ export class Renderer {
      */
     private enableGrid(): void {
         // TODO
-        /*
-        let n = 10;
-        let smallUnit = 1;
-        let bigUnit = smallUnit * 10;
-
-        for (let x = -100; x <= 100; x += smallUnit) {
-            let path = new Path(new Transform(Vector2.ZERO, Vector2.ZERO), 'rgba(0, 0, 0, 0.1)');
-            path.pointList.push(new Vector2(x, -100));
-            path.pointList.push(new Vector2(x, +100));
-            path.width = 1 / this.zoomSize;
-            this.drawPath(path);
-        }
-        */
     }
     
     /**
@@ -268,22 +236,25 @@ export class Renderer {
         });
 
         this.element.addEventListener('mousemove', e => {
-            if (e.buttons === 1) {
+            if (e.buttons === 2) {
                 this.cameraPosition = Vector2.substract(this.cameraPosition, new Vector2(e.movementX / this.zoomSize, - e.movementY / this.zoomSize));
             }
         });
 
         this.element.addEventListener('mousedown', e => {
-            if (e.button === 2) {
+            if (e.button === 0) {
                 for (let i = 0; i < this.environment.unitList.length; i++) {
                     let unit = this.environment.unitList[i];
                     let convertedPosition = this.getRealPixelPosition(unit.transform.position);
                     let convertedScale = this.convertMeterToPixel(unit.transform.scale);
 
                     if (e.offsetX > convertedPosition.x - convertedScale.y / 2 && e.offsetX < convertedPosition.x + convertedScale.y / 2 && e.offsetY > convertedPosition.y - convertedScale.x / 2 && e.offsetY < convertedPosition.y + convertedScale.x / 2) {
-                        this._focusedUnit = unit;
+                        this._focused = unit;
+                        return;
                     }
                 }
+
+                this._focused = this.environment;
             }
         });
     }

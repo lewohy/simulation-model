@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div id="component">
+        <div id="component" @keydown.esc="onCancel">
             <div id="dialog-area">
                 <div id="title-view">
                     {{ propertyName }}
@@ -8,10 +8,18 @@
 
                 <input id="value-input" v-model="value">
 
-                <normal-button id="cancel-button" button-id="cancel-button" text="Cancel" :onClick="onClick">
+                <normal-button id="cancel-button"
+                    button-id="cancel-button"
+                    text="Cancel"
+                    :onClick="onClick">
+                    
                 </normal-button>
                 
-                <normal-button id="apply-button" button-id="apply-button" text="Apply" :onClick="onClick">
+                <normal-button id="apply-button"
+                    button-id="apply-button"
+                    text="Apply"
+                    :onClick="onClick">
+
                 </normal-button>
             </div>
         </div>
@@ -38,6 +46,9 @@ export default Vue.extend({
     },
     created: function() {
         this.value = this.defaultValue;
+    },
+    mounted: function() {
+        document.getElementById('value-input').focus();
     },
     methods: {
         onClick: function(id: string) {
@@ -94,12 +105,12 @@ export default Vue.extend({
     border-top: none;
     border-left: none;
     border-right: none;
-    border-bottom: 1px solid #efefef;
+    border-bottom: 2px solid #efefef;
     transition: border-bottom 0.2s;
 }
 
 #value-input:focus {
-    border-bottom: 1px solid #efafaf;
+    border-bottom: 2px solid #efafaf;
 }
 
 #apply-button, #cancel-button {

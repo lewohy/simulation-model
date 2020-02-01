@@ -2,7 +2,7 @@
     <div>
         <div id="component">
             <div id="name-view">
-                {{ unitName }}
+                {{ objName }}
             </div>
             <property-editor-item-view v-for="propertyData in propertyList"
                 :key="propertyData.propertyName"
@@ -12,13 +12,15 @@
                 
             </property-editor-item-view>
 
-            <property-editor-dialog v-if="editingPropertyName != null"
-                :property-name="editingPropertyName"
-                :default-value="getPropertyValue(editingPropertyName)"
-                :on-apply="onApply"
-                :on-cancel="onCancel">
+            <transition name="dialog-fade">
+                <property-editor-dialog v-if="editingPropertyName != null"
+                    :property-name="editingPropertyName"
+                    :default-value="getPropertyValue(editingPropertyName)"
+                    :on-apply="onApply"
+                    :on-cancel="onCancel">
 
-            </property-editor-dialog>
+                </property-editor-dialog>
+            </transition>
         </div>
     </div>
 </template>
@@ -39,36 +41,36 @@ export default Vue.extend({
     },
     data: function() {
         return {
-            unit: <Unit> null,
-            unitName: <String> null,
+            obj: <object> null,
+            objName: <String> null,
             propertyList: new Array<object>(),
             editingPropertyName: <String> null
         };
     },
     mounted: function() {
         setInterval(() => {
-            if (this.unit != this.model.renderer.focusedUnit) {
+            if (this.obj != this.model.renderer.focused) {
                 this.reset();
             }
 
-            if (this.unit) {
+            if (this.obj) {
                 for (let i = 0; i < this.propertyList.length; i++) {
-                    this.propertyList[i]['propertyValue'] = this.unit[this.propertyList[i]['propertyName']];
+                    this.propertyList[i]['propertyValue'] = this.obj[this.propertyList[i]['propertyName']];
                 }
             }
         }, 5);
     },
     methods: {
         reset: function() {
-            this.unit = this.model.renderer.focusedUnit;
+            this.obj = this.model.renderer.focused;
 
-            this.unitName = this.unit.name;
+            this.objName = this.obj.constructor.name;
             this.propertyList = new Array<object>();
 
-            for (let propertyName in this.unit) {
-                let descriptor = Object.getOwnPropertyDescriptor(this.unit, propertyName);
+            for (let propertyName in this.obj) {
+                let descriptor = Object.getOwnPropertyDescriptor(this.obj, propertyName);
                 if (descriptor && descriptor.configurable) {
-                    let propertyValue = this.unit[propertyName];
+                    let propertyValue = this.obj[propertyName];
                     if (['string', 'number'].indexOf(typeof(propertyValue)) > -1) {
                         this.propertyList.push({
                             propertyName: propertyName,
@@ -85,10 +87,10 @@ export default Vue.extend({
             try {
                 this.editingPropertyName = null;
 
-                if (typeof(this.unit[propertyName]) === 'string') {
-                    this.unit[propertyName] = propertyValue;
-                } else if (typeof(this.unit[propertyName]) === 'number') {
-                    this.unit[propertyName] = parseInt(propertyValue);
+                if (typeof(this.obj[propertyName]) === 'string') {
+                    this.obj[propertyName] = propertyValue;
+                } else if (typeof(this.obj[propertyName]) === 'number') {
+                    this.obj[propertyName] = parseFloat(propertyValue);
                 }
                 
                 this.reset();
@@ -136,5 +138,13 @@ export default Vue.extend({
     width: 100%;
     height: auto;
     margin-bottom: 4px;
+}
+
+.dialog-fade-enter-active, .dialog-fade-leave-active {
+    transition: opacity 0.1s;
+}
+
+.dialog-fade-enter, .dialog-fade-leave-to {
+    opacity: 0;
 }
 </style>

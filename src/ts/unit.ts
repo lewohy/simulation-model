@@ -27,11 +27,11 @@ export class Environment {
 
         setInterval(() => {
             this._tick += Environment.EPSILON_DELAY;
-            this._deltaTime = this.timeScale / 60;
-            this._elapsedTime += this.deltaTime;
             
             if (this._tick > 17 / this.timeScale) {
                 this._tick = 0;
+                this._deltaTime = this.timeScale / 60;
+                this._elapsedTime += this.deltaTime;
                 
                 this.unitList.forEach(unit => {
                     if (unit instanceof Agent) {
@@ -39,6 +39,7 @@ export class Environment {
                     }
 
                     unit.onUpdate();
+                    unit.runCoroutine();
                 });
             }
         }, Environment.EPSILON_DELAY);
@@ -59,6 +60,8 @@ export abstract class Unit {
     public readonly transform: Transform;
     protected readonly _environment: Environment;
 
+    private coroutineList: Array<Generator>;
+
     public get environment(): Environment {
         return this._environment;
     }
@@ -67,6 +70,8 @@ export abstract class Unit {
         this.name = 'Unit';
         this.transform = new Transform(Vector2.ZERO, new Vector2(1, 1), 0);
         this._environment = environment;
+
+        this.coroutineList = new Array<Generator>();
     }
 
     public register(): void {
@@ -87,6 +92,28 @@ export abstract class Unit {
      * 유닛 생성후 170 / timeScale ms 마다 호출
      */
     public abstract onUpdate(): void;
+
+    /**
+     * 코루틴 실행
+     */
+    public runCoroutine(): void {
+        for (let i = 0; i < this.coroutineList.length; i++) {
+            let current = this.coroutineList[i].next();
+
+            if (current.done) {
+                this.coroutineList.splice(i, 1);
+                i--;
+            }
+        }
+    }
+
+    /**
+     * 실행할 코루틴 추가
+     * @param generator 
+     */
+    protected startCoroutine(generator: Generator): void {
+        this.coroutineList.push(generator);
+    }
 }
 
 /**
@@ -96,12 +123,24 @@ export abstract class Facility extends Unit {
     public readonly agentList: Array<Agent>;
     public readonly portList: Array<Facility>;
 
+    private _maxCapacity: number;
+
+    public get agentCount(): number {
+        return this.agentList.length;
+    }
+
+    public get maxCapacity(): number {
+        return this._maxCapacity;
+    }
+
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'Facility';
         this.agentList = new Array<Agent>();
         this.portList = new Array<Facility>();
+        this._maxCapacity = 10;
+
         this.transform.scale = new Vector2(20, 20);
     }
 
@@ -116,6 +155,7 @@ export abstract class Facility extends Unit {
 
         this.agentList.push(agent);
         agent.currentFacility = this;
+        agent.onEnter(this);
         this.onAgentIn(agent);
     }
 
@@ -129,6 +169,7 @@ export abstract class Facility extends Unit {
                 this.agentList.splice(i, 1);
                 this.onAgentOut(agent);
                 agent.currentFacility = null;
+                agent.onLeave(this);
                 break;
             }
         }
@@ -145,13 +186,13 @@ export abstract class Facility extends Unit {
     }
 
     /**
-     * Agent가 시설에 들어올 때 호출
+     * Agent가 Facility에 들어올 때 호출
      * @param agent 들어온 Agent
      */
     public abstract onAgentIn(agent: Agent): void;
 
     /**
-     * Agent가 시설에서 나갈 때 호출
+     * Agent가 Facility에서 나갈 때 호출
      * @param agent 나간 Agent
      */
     public abstract onAgentOut(agent: Agent): void;
@@ -172,10 +213,30 @@ export abstract class Agent extends Unit {
         this.componentList = new Array<Component>();
     }
 
+    /**
+     * Facility에 들어갈 때 호출
+     * @param agent 들어온 Agent
+     */
+    public abstract onEnter(facility: Facility): void;
+
+    /**
+     * Facility에서 나갈 때 호출
+     * @param agent 나간 Agent
+     */
+    public abstract onLeave(facility: Facility): void;
+
+    /**
+     * 컴포넌트 추가
+     * @param component 
+     */
     public addComponent(component: Component): void {
         this.componentList.push(component);
     }
 
+    /**
+     * 컴포넌트 삭제
+     * @param component 
+     */
     public removeComponent(component: Component): void {
         for (let i = 0; i < this.componentList.length; i++) {
             if (this.componentList[i] === component) {
@@ -184,6 +245,9 @@ export abstract class Agent extends Unit {
         }
     }
 
+    /**
+     * 추가된 모든 컴포넌트 적용
+     */
     public applyComponents(): void {
         this.componentList.forEach(component => {
             component.do(this);

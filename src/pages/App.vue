@@ -23,19 +23,18 @@ export default Vue.extend({
     },
     mounted: function() {
         this.model = new Model(<HTMLCanvasElement> document.getElementById('simulation-view'));
-
     }
 });
 </script>
 <style lang="scss" scoped>
 #simulation-view {
-    width: calc(100% - 256px);
+    width: 80%;
     height: 100%;
     float: left;
 }
 
 #property-editor {
-    width: 256px;
+    width: 20%;
     height: 100%;
     float: left;
 }

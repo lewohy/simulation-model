@@ -1,9 +1,9 @@
 import random from 'random';
 
-import { Environment, Facility, Agent } from "./unit"
+import { Environment, Facility, Agent } from "./unit";
 import { Renderer } from "./renderer";
 import { Shape, Circle, Font, Quad, Path } from "./drawer";
-import { Vector2, TruckArrivalData } from "./types";
+import { Vector2, TruckArrivalData, Wait } from "./types";
 import { Dynamics } from './component';
 
 export class Model {
@@ -22,10 +22,10 @@ export class Model {
     private outGateway: OutGateway;
     private externalDestination: ExternalDestination;
 
-    public constructor(elemeht: HTMLCanvasElement) {
+    public constructor(element: HTMLCanvasElement) {
         this.environment = new Environment();
-        this.environment.timeScale = 100;
-        this.renderer = new Renderer(this.environment, elemeht);
+        this.environment.timeScale = 50;
+        this.renderer = new Renderer(this.environment, element);
 
         this.setup();
     }
@@ -231,13 +231,25 @@ class Road extends Facility {
     public static readonly LANE_WIDTH = 2;
 
     private readonly pointList: Array<Vector2>;
-    public laneCount = 1;
+    private _laneCount: number;
+    private _speedLimit: number;
+
+    public get laneCount(): number {
+        return this._speedLimit;
+    }
+
+    public get speedLimit(): number {
+        return this._speedLimit;
+    }
 
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'Road';
         this.pointList = new Array<Vector2>();
+        this._laneCount = 1;
+        this._speedLimit = 2.7;
+
         this.transform.scale = new Vector2(Road.LANE_WIDTH, Road.LANE_WIDTH);
     }
 
@@ -353,7 +365,7 @@ class Road extends Facility {
         }
 
         return Math.atan2(this.pointList[index + 1].y - this.pointList[index].y, this.pointList[index + 1].x - this.pointList[index].x);
-    }   
+    }
 }
 
 /**
@@ -410,17 +422,22 @@ class TruckGenerator extends Facility {
         */
         
         for (let i = 0; i < 162; i++) {
-            let timeData = new TruckArrivalData(Math.random() * 720000, TruckArrivalData.TRUCK_KIND_SEA_BULK);
+            let timeData = new TruckArrivalData(Math.random() * 43200, TruckArrivalData.TRUCK_KIND_SEA_BULK);
             this.truckArrivalTimeDataList.push(timeData);
         }
 
         for (let i = 0; i < 70; i++) {
-            let timeData = new TruckArrivalData(Math.random() * 720000, TruckArrivalData.TRUCK_KIND_TANK_BULK);
+            let timeData = new TruckArrivalData(Math.random() * 43200, TruckArrivalData.TRUCK_KIND_TANK_BULK);
             this.truckArrivalTimeDataList.push(timeData);
         }
 
-        for (let i = 0; i < 358; i++) {
-            let timeData = new TruckArrivalData(Math.random() * 720000, TruckArrivalData.TRUCK_KIND_DOKE);
+        for (let i = 0; i < 54; i++) {
+            let timeData = new TruckArrivalData(Math.random() * 43200, TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG);
+            this.truckArrivalTimeDataList.push(timeData);
+        }
+
+        for (let i = 0; i < 304; i++) {
+            let timeData = new TruckArrivalData(Math.random() * 43200, TruckArrivalData.TRUCK_KIND_DOKE_PALLET);
             this.truckArrivalTimeDataList.push(timeData);
         }
 
@@ -443,8 +460,10 @@ class TruckGenerator extends Facility {
                     truck = new SeaBulkTruck(this.environment);
                 } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_TANK_BULK) {
                     truck = new TankBulkTruck(this.environment);
-                } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_DOKE) {
-                    truck = new DockTruck(this.environment);
+                } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG) {
+                    truck = new DockTruck(this.environment, DockTruck.LOOSE_BAG);
+                } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_DOKE_PALLET) {
+                    truck = new DockTruck(this.environment, DockTruck.PALLET);
                 }
 
                 truck.register();
@@ -573,13 +592,9 @@ class InGateway extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        if (agent instanceof SeaBulkTruck) {
-            this.portList[0].appendAgent(agent);
-        } else if (agent instanceof TankBulkTruck) {
-            this.portList[1].appendAgent(agent);
-        } else if (agent instanceof DockTruck) {
-            this.portList[2].appendAgent(agent);
-        }
+        agent.transform.position = this.transform.position;
+
+        this.startCoroutine(this.checkTruck(<Truck> agent));
     }
 
     /**
@@ -613,6 +628,22 @@ class InGateway extends Facility {
      */
     public onUpdate(): void {
         
+    }
+
+    /**
+     * 트럭 검문 구현
+     * @param truck 
+     */
+    private *checkTruck(truck: Truck): any {
+        yield* Wait.forSeconds(this.environment, 5 * 60);
+        
+        if (truck instanceof SeaBulkTruck) {
+            this.portList[0].appendAgent(truck);
+        } else if (truck instanceof TankBulkTruck) {
+            this.portList[1].appendAgent(truck);
+        } else if (truck instanceof DockTruck) {
+            this.portList[2].appendAgent(truck);
+        }
     }
 }
 
@@ -675,7 +706,9 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        this.portList[0].appendAgent(agent);
+        agent.transform.position = this.transform.position;
+
+        this.startCoroutine(this.prepareLiner(<SeaBulkTruck> agent));
     }
 
     /**
@@ -709,6 +742,12 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
      */
     public onUpdate(): void {
         
+    }
+
+    private *prepareLiner(truck: SeaBulkTruck): any {
+        yield* Wait.forSeconds(this.environment, 15 * 60);
+
+        this.portList[0].appendAgent(truck);
     }
 }
 
@@ -723,7 +762,9 @@ class WeightMesaurementPlace extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        this.portList[0].appendAgent(agent);
+        agent.transform.position = this.transform.position;
+
+        this.startCoroutine(this.measureWeight(<Truck> agent));
     }
 
     /**
@@ -757,6 +798,12 @@ class WeightMesaurementPlace extends Facility {
      */
     public onUpdate(): void {
         
+    }
+
+    private *measureWeight(truck: Truck): any {
+        yield* Wait.forSeconds(this.environment, 2 * 60);
+
+        this.portList[0].appendAgent(truck);
     }
 }
 
@@ -771,7 +818,9 @@ class BulkProductLoadingPlace extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        this.portList[0].appendAgent(agent);
+        agent.transform.position = this.transform.position;
+
+        this.startCoroutine(this.loadProduct(<Truck> agent));
     }
 
     /**
@@ -805,6 +854,12 @@ class BulkProductLoadingPlace extends Facility {
      */
     public onUpdate(): void {
         
+    }
+
+    private *loadProduct(truck: SeaBulkTruck): any {
+        yield* Wait.forSeconds(this.environment, 50 * 60);
+
+        this.portList[0].appendAgent(truck);
     }
 }
 
@@ -819,7 +874,9 @@ class DockProductLoadingPlace extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        this.portList[0].appendAgent(agent);
+        agent.transform.position = this.transform.position;
+
+        this.startCoroutine(this.loadProduct(<DockTruck> agent));
     }
 
     /**
@@ -853,6 +910,16 @@ class DockProductLoadingPlace extends Facility {
      */
     public onUpdate(): void {
         
+    }
+
+    private *loadProduct(truck: DockTruck): any {
+        if (truck.type == DockTruck.LOOSE_BAG) {
+            yield* Wait.forSeconds(this.environment, 60 * 60);
+        } else if (truck.type == DockTruck.PALLET) {
+            yield* Wait.forSeconds(this.environment, 50 * 60);
+        }
+
+        this.portList[0].appendAgent(truck);
     }
 }
 
@@ -930,9 +997,9 @@ abstract class Truck extends Agent {
     public onUpdate(): void {
         if (this.currentFacility instanceof Road) {
             let road = <Road> this.currentFacility;
-
-            this.reset();
             
+            this.refreshVelocity(road);
+
             let currentProgress = Vector2.inverseLerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), this.transform.position);
 
             while (currentProgress >= 1) {
@@ -943,28 +1010,52 @@ abstract class Truck extends Agent {
                     this.currentRoadIndex = 0;
                     this.dynamic.velocity = Vector2.ZERO;
                     road.portList[0].appendAgent(this);
-
                     break;
                 }
                 currentProgress = currentProgress * Vector2.substract(road.getPoint(this.currentRoadIndex - 1), road.getPoint(this.currentRoadIndex)).magnitude / Vector2.substract(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1)).magnitude;
                 
                 if (currentProgress < 1) {
                     this.transform.position = Vector2.lerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), currentProgress);
-                    this.reset();
+                    this.refreshAngle(road);
+                    this.refreshVelocity(road);
                 }
             }
         }
     }
 
     /**
-     * 이부분 수정필요
+     * @override
      */
-    private reset(): void {
-        let road = <Road> this.currentFacility;
+    public onEnter(facility: Facility): void {
+        if (this.currentFacility instanceof Road) {
+            let road = <Road> this.currentFacility;
+
+            this.refreshAngle(road);
+            this.refreshVelocity(road);
+        }
+    }
+
+    /**
+     * @override
+     */
+    public onLeave(facility: Facility): void {
+
+    }
+
+    /**
+     * 해당 Road에 대한 트럭의 각도 설정
+     */
+    private refreshAngle(road: Road): void {
 
         let angle = road.getRoadAngle(this.currentRoadIndex);
         this.transform.rotation = angle;
-        this.dynamic.velocity = Vector2.multiply(this.transform.forward(), 2.7);
+    }
+
+    /**
+     * 해당 Road에 대한 트럭의 속도 설정
+     */
+    private refreshVelocity(road: Road): void {
+        this.dynamic.velocity = Vector2.multiply(this.transform.forward(), road.speedLimit);
     }
 }
 
@@ -980,7 +1071,7 @@ class SeaBulkTruck extends Truck {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform, 'rgba(256, 0, 0, 0.2)');
+        let quad = new Quad(this.transform, 'rgba(255, 0, 0, 0.2)');
         renderer.draw(quad);
     }
     
@@ -1012,7 +1103,7 @@ class TankBulkTruck extends Truck {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform, 'rgba(0, 256, 0, 0.2)');
+        let quad = new Quad(this.transform, 'rgba(0, 255, 0, 0.2)');
         renderer.draw(quad);
     }
     
@@ -1033,18 +1124,23 @@ class TankBulkTruck extends Truck {
 }
 
 class DockTruck extends Truck {
+    public static readonly LOOSE_BAG = 1;
+    public static readonly PALLET = 2;
 
-    public constructor(environment: Environment) {
+    public readonly type: number;
+
+    public constructor(environment: Environment, type: number) {
         super(environment);
         
         this.name = 'DockTruck';
+        this.type = type;
     }
 
     /**
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform, 'rgba(0, 0, 256, 0.2)');
+        let quad = new Quad(this.transform, this.type == DockTruck.LOOSE_BAG ? 'rgba(0, 0, 255, 0.2)' : 'rgba(0, 128, 255, 0.2)');
         renderer.draw(quad);
     }
     

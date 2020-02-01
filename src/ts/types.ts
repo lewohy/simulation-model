@@ -1,3 +1,5 @@
+import { Environment } from "./unit";
+
 /**
  * 2차원 벡터
  */
@@ -99,7 +101,8 @@ export class Transform {
 export class TruckArrivalData {
     public static readonly TRUCK_KIND_SEA_BULK = 1;
     public static readonly TRUCK_KIND_TANK_BULK = 2;
-    public static readonly TRUCK_KIND_DOKE = 3;
+    public static readonly TRUCK_KIND_DOKE_LOOSE_BAG = 3;
+    public static readonly TRUCK_KIND_DOKE_PALLET = 4;
 
     public readonly time: number;
     public readonly kind: number;
@@ -109,5 +112,25 @@ export class TruckArrivalData {
         this.time = time;
         this.kind = kind;
         this.isArrived = false;
+    }
+}
+
+/**
+ * 코루틴에서 사용하기 위한 클래스
+ */
+export class Wait {
+    /**
+     * 해당 초에 대응하는 onUpdate 횟수의 크기만큼의 배열 반환
+     * @param environment 
+     * @param seconds 
+     */
+    public static forSeconds(environment: Environment, seconds: number): Array<number> {
+        let arr = new Array<number>();
+
+        for (let i = 0; i < seconds / environment.deltaTime / environment.timeScale; i++) {
+            arr.push(i);
+        }
+
+        return arr;
     }
 }
