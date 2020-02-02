@@ -29,7 +29,7 @@ export class Environment {
         setInterval(() => {
             this._tick += Environment.EPSILON_DELAY;
             
-            if (this._tick > 17 / this.timeScale) {
+            if (this._tick > 17) {
                 this._tick = 0;
                 this._deltaTime = this.timeScale / 60;
                 this._elapsedTime += this.deltaTime;
@@ -264,14 +264,10 @@ export class Road extends Facility {
 
     private readonly pointList: Array<Vector2>;
     private _laneCount: number;
-    private _speedLimit: number;
+    public speedLimit: number;
 
     public get laneCount(): number {
-        return this._speedLimit;
-    }
-
-    public get speedLimit(): number {
-        return this._speedLimit;
+        return this._laneCount;
     }
 
     public constructor(environment: Environment) {
@@ -280,7 +276,7 @@ export class Road extends Facility {
         this.name = 'Road';
         this.pointList = new Array<Vector2>();
         this._laneCount = 1;
-        this._speedLimit = 2.7;
+        this.speedLimit = 2.7;
 
         this.transform.scale = new Vector2(Road.LANE_WIDTH, Road.LANE_WIDTH);
     }

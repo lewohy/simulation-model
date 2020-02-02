@@ -1,6 +1,6 @@
 <template>
     <div id="app">
-        <canvas id="simulation-view"></canvas>
+        <canvas id="renderer-view"></canvas>
 
         <property-editor id="property-editor" :model="model"></property-editor>
     </div>
@@ -8,9 +8,8 @@
 <script lang="ts">
 import Vue from 'vue';
 import PropertyEditor from './components/PropertyEditor.vue';
-import { Model } from "../ts/model";
-
-let simulationModel: Model;
+import { SimulationModel } from "../models/simulation";
+import { TestModel } from "../models/test";
 
 export default Vue.extend({
     components: {
@@ -22,12 +21,13 @@ export default Vue.extend({
         };
     },
     mounted: function() {
-        this.model = new Model(<HTMLCanvasElement> document.getElementById('simulation-view'));
+        this.model = new SimulationModel(<HTMLCanvasElement> document.getElementById('renderer-view'));
+        //sthis.model = new TestModel(<HTMLCanvasElement> document.getElementById('renderer-view'));
     }
 });
 </script>
 <style lang="scss" scoped>
-#simulation-view {
+#renderer-view {
     width: 80%;
     height: 100%;
     float: left;

@@ -37,7 +37,7 @@ export default Vue.extend({
         PropertyEditorDialog
     },
     props: {
-        model: Model,
+        model: null,
     },
     data: function() {
         return {
@@ -49,13 +49,15 @@ export default Vue.extend({
     },
     mounted: function() {
         setInterval(() => {
-            if (this.obj != this.model.renderer.focused) {
-                this.reset();
-            }
+            if (this.model instanceof Model) {
+                if (this.obj != this.model.renderer.focused) {
+                    this.reset();
+                }
 
-            if (this.obj) {
-                for (let i = 0; i < this.propertyList.length; i++) {
-                    this.propertyList[i]['propertyValue'] = this.obj[this.propertyList[i]['propertyName']];
+                if (this.obj) {
+                    for (let i = 0; i < this.propertyList.length; i++) {
+                        this.propertyList[i]['propertyValue'] = this.obj[this.propertyList[i]['propertyName']];
+                    }
                 }
             }
         }, 5);
