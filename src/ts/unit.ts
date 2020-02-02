@@ -1,6 +1,7 @@
 import { Vector2, Transform } from './types';
 import { Component } from './component';
 import { Renderer } from './renderer';
+import { Path } from './drawer';
 
 export class Environment {
     public static readonly EPSILON_DELAY = 5;
@@ -252,5 +253,149 @@ export abstract class Agent extends Unit {
         this.componentList.forEach(component => {
             component.do(this);
         });
+    }
+}
+
+/**
+ * 길
+ */
+export class Road extends Facility {
+    public static readonly LANE_WIDTH = 2;
+
+    private readonly pointList: Array<Vector2>;
+    private _laneCount: number;
+    private _speedLimit: number;
+
+    public get laneCount(): number {
+        return this._speedLimit;
+    }
+
+    public get speedLimit(): number {
+        return this._speedLimit;
+    }
+
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'Road';
+        this.pointList = new Array<Vector2>();
+        this._laneCount = 1;
+        this._speedLimit = 2.7;
+
+        this.transform.scale = new Vector2(Road.LANE_WIDTH, Road.LANE_WIDTH);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        agent.transform.position = this.pointList[0];
+    }
+    
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        let path = new Path(this.transform, 'rgba(128, 255, 255, 0.4)');
+        path.width = Road.LANE_WIDTH;
+        this.pointList.forEach(point => {
+            path.pointList.push(point);
+        });
+
+        renderer.draw(path);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+
+    /**
+     * point 추가
+     * @param point 
+     */
+    public addPoint(position: Vector2): void {
+        this.pointList.push(position);
+
+        let minX: number = position.x;
+        let minY: number = position.y;
+        let maxX: number = position.x;
+        let maxY: number = position.y;
+
+        this.pointList.forEach(point => {
+            if (point.x < minX) {
+                minX = point.x;
+            }
+
+            if (point.x > maxX) {
+                maxX = point.x;
+            }
+
+            if (point.y < minY) {
+                minY = point.y;
+            }
+
+            if (point.y > maxY) {
+                maxY = point.y;
+            }
+        });
+
+        let lbPosition = new Vector2(minX, minY);
+        let rtPosition = new Vector2(maxX, maxY);
+
+        let tmp = Vector2.substract(rtPosition, lbPosition);
+        this.transform.position = Vector2.add(lbPosition, Vector2.division(tmp, 2));
+        
+        if (tmp.x > Road.LANE_WIDTH) {
+            this.transform.scale.y = tmp.x;
+        }
+        
+        if (tmp.y > Road.LANE_WIDTH) {
+            this.transform.scale.x = tmp.y;
+        }
+    }
+
+    /**
+     * point 반환
+     * @param index 
+     */
+    public getPoint(index: number): Vector2 {
+        return this.pointList[index];
+    }
+
+    /**
+     * point 갯수 반환
+     * @param index 
+     */
+    public getPointLength(): number {
+        return this.pointList.length;
+    }
+
+    /**
+     * 해당 길의 각도 반환
+     * @param index 
+     */
+    public getRoadAngle(index: number): number {
+        if (this.pointList.length <= index + 1) {
+            return 0;
+        }
+
+        return Math.atan2(this.pointList[index + 1].y - this.pointList[index].y, this.pointList[index + 1].x - this.pointList[index].x);
     }
 }

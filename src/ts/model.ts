@@ -1,10 +1,10 @@
 import random from 'random';
 
-import { Environment, Facility, Agent } from "./unit";
+import { Environment, Facility, Agent, Road } from "./unit";
 import { Renderer } from "./renderer";
 import { Shape, Circle, Font, Quad, Path } from "./drawer";
 import { Vector2, TruckArrivalData, Wait } from "./types";
-import { Dynamics } from './component';
+import { Dynamics, Vehicle } from './component';
 
 export class Model {
     public readonly environment: Environment;
@@ -221,150 +221,6 @@ export class Model {
         lpp2wmp1.register();
         ig2dplp.register();
         dplp2og.register();
-    }
-}
-
-/**
- * 트럭이 지나다닐 길
- */
-class Road extends Facility {
-    public static readonly LANE_WIDTH = 2;
-
-    private readonly pointList: Array<Vector2>;
-    private _laneCount: number;
-    private _speedLimit: number;
-
-    public get laneCount(): number {
-        return this._speedLimit;
-    }
-
-    public get speedLimit(): number {
-        return this._speedLimit;
-    }
-
-    public constructor(environment: Environment) {
-        super(environment);
-
-        this.name = 'Road';
-        this.pointList = new Array<Vector2>();
-        this._laneCount = 1;
-        this._speedLimit = 2.7;
-
-        this.transform.scale = new Vector2(Road.LANE_WIDTH, Road.LANE_WIDTH);
-    }
-
-    /**
-     * @override
-     */
-    public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.pointList[0];
-    }
-    
-    /**
-     * @override
-     */
-    public onAgentOut(agent: Agent): void {
-        
-    }
-
-    /**
-     * @override
-     */
-    public render(renderer: Renderer): void {
-        let path = new Path(this.transform, 'rgba(128, 255, 255, 0.4)');
-        path.width = Road.LANE_WIDTH;
-        this.pointList.forEach(point => {
-            path.pointList.push(point);
-        });
-
-        renderer.draw(path);
-    }
-
-    /**
-     * @override
-     */
-    public onStart(): void {
-        
-    }
-
-    /**
-     * @override
-     */
-    public onUpdate(): void {
-        
-    }
-
-    /**
-     * point 추가
-     * @param point 
-     */
-    public addPoint(position: Vector2): void {
-        this.pointList.push(position);
-
-        let minX: number = position.x;
-        let minY: number = position.y;
-        let maxX: number = position.x;
-        let maxY: number = position.y;
-
-        this.pointList.forEach(point => {
-            if (point.x < minX) {
-                minX = point.x;
-            }
-
-            if (point.x > maxX) {
-                maxX = point.x;
-            }
-
-            if (point.y < minY) {
-                minY = point.y;
-            }
-
-            if (point.y > maxY) {
-                maxY = point.y;
-            }
-        });
-
-        let lbPosition = new Vector2(minX, minY);
-        let rtPosition = new Vector2(maxX, maxY);
-
-        let tmp = Vector2.substract(rtPosition, lbPosition);
-        this.transform.position = Vector2.add(lbPosition, Vector2.division(tmp, 2));
-        
-        if (tmp.x > Road.LANE_WIDTH) {
-            this.transform.scale.y = tmp.x;
-        }
-        
-        if (tmp.y > Road.LANE_WIDTH) {
-            this.transform.scale.x = tmp.y;
-        }
-    }
-
-    /**
-     * point 반환
-     * @param index 
-     */
-    public getPoint(index: number): Vector2 {
-        return this.pointList[index];
-    }
-
-    /**
-     * point 갯수 반환
-     * @param index 
-     */
-    public getPointLength(): number {
-        return this.pointList.length;
-    }
-
-    /**
-     * 해당 길의 각도 반환
-     * @param index 
-     */
-    public getRoadAngle(index: number): number {
-        if (this.pointList.length <= index + 1) {
-            return 0;
-        }
-
-        return Math.atan2(this.pointList[index + 1].y - this.pointList[index].y, this.pointList[index + 1].x - this.pointList[index].x);
     }
 }
 
@@ -977,7 +833,7 @@ abstract class Truck extends Agent {
 
     public currentRoadIndex: number = 0;
 
-    protected dynamic: Dynamics;
+    protected vehicle: Vehicle;
 
     public constructor(environment: Environment) {
         super(environment);
@@ -986,8 +842,8 @@ abstract class Truck extends Agent {
 
         this.transform.scale = new Vector2(Truck.WIDTH, Truck.LENGTH);
         
-        this.dynamic = new Dynamics();
-        this.addComponent(this.dynamic);
+        this.vehicle = new Vehicle();
+        this.addComponent(this.vehicle);
     }
 
     /**
@@ -995,44 +851,14 @@ abstract class Truck extends Agent {
      * @override
      */
     public onUpdate(): void {
-        if (this.currentFacility instanceof Road) {
-            let road = <Road> this.currentFacility;
-            
-            this.refreshVelocity(road);
-
-            let currentProgress = Vector2.inverseLerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), this.transform.position);
-
-            while (currentProgress >= 1) {
-                currentProgress -= 1;
-                this.currentRoadIndex++;
-
-                if (this.currentRoadIndex === road.getPointLength() - 1) {
-                    this.currentRoadIndex = 0;
-                    this.dynamic.velocity = Vector2.ZERO;
-                    road.portList[0].appendAgent(this);
-                    break;
-                }
-                currentProgress = currentProgress * Vector2.substract(road.getPoint(this.currentRoadIndex - 1), road.getPoint(this.currentRoadIndex)).magnitude / Vector2.substract(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1)).magnitude;
-                
-                if (currentProgress < 1) {
-                    this.transform.position = Vector2.lerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), currentProgress);
-                    this.refreshAngle(road);
-                    this.refreshVelocity(road);
-                }
-            }
-        }
+        
     }
 
     /**
      * @override
      */
     public onEnter(facility: Facility): void {
-        if (this.currentFacility instanceof Road) {
-            let road = <Road> this.currentFacility;
-
-            this.refreshAngle(road);
-            this.refreshVelocity(road);
-        }
+        
     }
 
     /**
@@ -1040,22 +866,6 @@ abstract class Truck extends Agent {
      */
     public onLeave(facility: Facility): void {
 
-    }
-
-    /**
-     * 해당 Road에 대한 트럭의 각도 설정
-     */
-    private refreshAngle(road: Road): void {
-
-        let angle = road.getRoadAngle(this.currentRoadIndex);
-        this.transform.rotation = angle;
-    }
-
-    /**
-     * 해당 Road에 대한 트럭의 속도 설정
-     */
-    private refreshVelocity(road: Road): void {
-        this.dynamic.velocity = Vector2.multiply(this.transform.forward(), road.speedLimit);
     }
 }
 
