@@ -2,7 +2,7 @@ import { Model } from "../ts/model";
 import { Road, Facility, Environment, Agent } from "../ts/unit";
 import { Vector2 } from "../ts/types";
 import { Renderer } from "../ts/renderer";
-import { Quad } from "../ts/drawer";
+import { Quad, Font } from "../ts/drawer";
 import { Vehicle } from "../ts/component";
 
 export class TestModel extends Model {
@@ -17,28 +17,133 @@ export class TestModel extends Model {
      * @override
      */
     protected setup(): void {
-        let road = new Road(this.environment);
-        road.speedLimit = 16;
-        road.addPoint(new Vector2(0, 0));
-        road.addPoint(new Vector2(10, 10));
-        road.addPoint(new Vector2(20, -10));
-        road.addPoint(new Vector2(30, 10));
-        road.addPoint(new Vector2(40, -10));
-        road.addPoint(new Vector2(50, 10));
-        road.addPoint(new Vector2(40, 15));
-        road.addPoint(new Vector2(30, 20));
-        road.addPoint(new Vector2(20, 25));
-        road.addPoint(new Vector2(0, 10));
-        road.addPoint(new Vector2(-10, -5));
-        road.portList.push(road);
-        road.register();
+        let truckGenerator = new TruckGenerator(this.environment);
+        truckGenerator.transform.position = Vector2.ZERO;
 
-        let truck = new SeaBulkTruck(this.environment);
-        truck.register();
-        road.appendAgent(truck);
+        let testFacility = new TestFacility(this.environment);
+        testFacility.transform.position = new Vector2(100, 0);
+
+        let road = new Road(this.environment);
+        road.speedLimit = 10;
+        road.addPoint(truckGenerator.getSidePosition(0));
+        road.addPoint(testFacility.getSidePosition(Math.PI));
+        road.portList.push(testFacility);
+        
+        truckGenerator.portList.push(road);
+
+        truckGenerator.register();
+        testFacility.register();
+
+        road.register();
     }
 }
 
+
+class TruckGenerator extends Facility {
+    private tick: number;
+
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'TruckGenerator';
+
+        this.tick = 0;
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        let quad = new Quad(this.transform);
+        renderer.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = this.name;
+        renderer.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+
+        if (this.tick % 6000 === 0) {
+            let truck = new SeaBulkTruck(this.environment);
+            truck.register();
+            this.portList[0].appendAgent(truck);
+        }
+        this.tick++;
+    }
+}
+
+class TestFacility extends Facility {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'TestFacility';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        let quad = new Quad(this.transform);
+        renderer.draw(quad);
+
+        let font = new Font(this.transform);
+        font.text = this.name;
+        renderer.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+}
 
 abstract class Truck extends Agent {
     public static readonly WIDTH = 1.85;

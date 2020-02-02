@@ -44,6 +44,8 @@ export class Vehicle extends Component {
      * @override
      */
     public do(agent: Agent): void {
+        // 더 좋은 알고리즘 있을거같음
+        
         if (agent.currentFacility instanceof Road) {
             let road = <Road> agent.currentFacility;
 

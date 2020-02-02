@@ -22,7 +22,7 @@ export default Vue.extend({
     },
     mounted: function() {
         this.model = new SimulationModel(<HTMLCanvasElement> document.getElementById('renderer-view'));
-        //sthis.model = new TestModel(<HTMLCanvasElement> document.getElementById('renderer-view'));
+        //this.model = new TestModel(<HTMLCanvasElement> document.getElementById('renderer-view'));
     }
 });
 </script>
