@@ -127,7 +127,8 @@ export class Wait {
     public static forSeconds(environment: Environment, seconds: number): Array<number> {
         let arr = new Array<number>();
 
-        for (let i = 0; i < seconds / environment.deltaTime / environment.timeScale; i++) {
+        // '* 60' 약간 오차있음
+        for (let i = 0; i < seconds * 60 / environment.timeScale; i++) {
             arr.push(i);
         }
 

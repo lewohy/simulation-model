@@ -791,7 +791,7 @@ class ExternalDestination extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        
+        agent.transform.position = this.transform.position;
     }
 
     /**
@@ -811,6 +811,11 @@ class ExternalDestination extends Facility {
         let font = new Font(this.transform);
         font.text = this.name;
         renderer.draw(font);
+
+        let font2 = new Font(this.transform);
+        font2.transform.position = Vector2.substract(font2.transform.position, new Vector2(0, 10));
+        font2.text = '도착한 트럭 수: ' + this.agentCount;
+        renderer.draw(font2);
     }
 
     /**

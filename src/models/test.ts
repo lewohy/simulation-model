@@ -1,6 +1,6 @@
 import { Model } from "../ts/model";
 import { Road, Facility, Environment, Agent } from "../ts/unit";
-import { Vector2 } from "../ts/types";
+import { Vector2, Wait } from "../ts/types";
 import { Renderer } from "../ts/renderer";
 import { Quad, Font } from "../ts/drawer";
 import { Vehicle } from "../ts/component";
@@ -88,7 +88,7 @@ class TruckGenerator extends Facility {
      * @override
      */
     public onStart(): void {
-        
+        this.startCoroutine(this.test());
     }
 
     /**
@@ -104,6 +104,13 @@ class TruckGenerator extends Facility {
         }
 
         this.time += this.environment.deltaTime;
+    }
+
+    private *test(): any {
+        while (true) {
+            yield* Wait.forSeconds(this.environment, 1);
+            console.log(this.environment.elapsedTime);
+        }
     }
 }
 
