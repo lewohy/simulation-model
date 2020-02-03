@@ -5,7 +5,7 @@ export abstract class Picture {
     public transform: Transform;
 
     public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 0.2)') {
-        this.transform = transform;
+        this.transform = new Transform(transform.position, transform.scale, transform.rotation);
         this.color = color;
     }
 }

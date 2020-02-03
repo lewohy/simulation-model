@@ -54,10 +54,10 @@ export class Vehicle extends Component {
 
             this.dynamic.do(agent);
 
-            let currentProgress = Vector2.inverseLerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), agent.transform.position);
+            this.currentRoadProgress = Vector2.inverseLerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), agent.transform.position);
 
-            while (currentProgress >= 1) {
-                currentProgress -= 1;
+            while (this.currentRoadProgress >= 1) {
+                this.currentRoadProgress -= 1;
                 this.currentRoadIndex++;
 
                 if (this.currentRoadIndex === road.getPointLength() - 1) {
@@ -67,10 +67,10 @@ export class Vehicle extends Component {
                     break;
                 }
 
-                currentProgress = currentProgress * Vector2.substract(road.getPoint(this.currentRoadIndex - 1), road.getPoint(this.currentRoadIndex)).magnitude / Vector2.substract(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1)).magnitude;
+                this.currentRoadProgress = this.currentRoadProgress * Vector2.substract(road.getPoint(this.currentRoadIndex - 1), road.getPoint(this.currentRoadIndex)).magnitude / Vector2.substract(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1)).magnitude;
                 
-                if (currentProgress < 1) {
-                    agent.transform.position = Vector2.lerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), currentProgress);
+                if (this.currentRoadProgress < 1) {
+                    agent.transform.position = Vector2.lerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), this.currentRoadProgress);
                     this.refreshAngle(agent, road);
                     this.refreshVelocity(agent, road);
                 }

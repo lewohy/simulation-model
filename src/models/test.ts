@@ -24,8 +24,16 @@ export class TestModel extends Model {
         testFacility.transform.position = new Vector2(100, 0);
 
         let road = new Road(this.environment);
+        let tmp = truckGenerator.getSidePosition(0);
         road.speedLimit = 10;
-        road.addPoint(truckGenerator.getSidePosition(0));
+        road.addPoint(tmp);
+        road.addPoint(Vector2.add(tmp, new Vector2(10, 0)));
+        road.addPoint(Vector2.add(tmp, new Vector2(20, -10)));
+        road.addPoint(Vector2.add(tmp, new Vector2(30, 10)));
+        road.addPoint(Vector2.add(tmp, new Vector2(40, -10)));
+        road.addPoint(Vector2.add(tmp, new Vector2(50, 10)));
+        road.addPoint(Vector2.add(tmp, new Vector2(60, -10)));
+        road.addPoint(Vector2.add(tmp, new Vector2(70, 0)));
         road.addPoint(testFacility.getSidePosition(Math.PI));
         road.portList.push(testFacility);
         
@@ -40,14 +48,14 @@ export class TestModel extends Model {
 
 
 class TruckGenerator extends Facility {
-    private tick: number;
+    private time: number;
 
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'TruckGenerator';
 
-        this.tick = 0;
+        this.time = 0;
     }
 
     /**
@@ -88,12 +96,14 @@ class TruckGenerator extends Facility {
      */
     public onUpdate(): void {
 
-        if (this.tick % 6000 === 0) {
+        if (this.time > 1) {
+            this.time = 0;
             let truck = new SeaBulkTruck(this.environment);
             truck.register();
             this.portList[0].appendAgent(truck);
         }
-        this.tick++;
+
+        this.time += this.environment.deltaTime;
     }
 }
 
@@ -108,7 +118,7 @@ class TestFacility extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        
+        agent.transform.position = this.transform.position;
     }
 
     /**
@@ -128,6 +138,11 @@ class TestFacility extends Facility {
         let font = new Font(this.transform);
         font.text = this.name;
         renderer.draw(font);
+
+        let font2 = new Font(this.transform);
+        font2.transform.position = Vector2.add(font2.transform.position, new Vector2(0, -5));
+        font2.text = 'Agent count: ' + this.agentCount;
+        renderer.draw(font2);
     }
 
     /**
