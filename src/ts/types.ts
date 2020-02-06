@@ -50,6 +50,13 @@ export class Vector2 {
         this.x = x;
         this.y = y;
     }
+
+    /**
+     * 깊은 복사
+     */
+    public clone(): Vector2 {
+        return new Vector2(this.x, this.y);
+    }
 }
 
 /**
@@ -93,6 +100,13 @@ export class Transform {
 
         return vector;
     }
+
+    /**
+     * 깊은 복사
+     */
+    public clone(): Transform {
+        return new Transform(new Vector2(this.position.x, this.position.y), new Vector2(this.scale.x, this.scale.y), this.rotation);
+    }
 }
 
 /**
@@ -120,18 +134,15 @@ export class TruckArrivalData {
  */
 export class Wait {
     /**
-     * 해당 초에 대응하는 onUpdate 횟수의 크기만큼의 배열 반환
+     * Generator에서 yield* 하면 해당 초 만큼 sleep
      * @param environment 
      * @param seconds 
      */
-    public static forSeconds(environment: Environment, seconds: number): Array<number> {
-        let arr = new Array<number>();
+    public static *forSeconds(environment: Environment, seconds: number): any {
+        let startTime = environment.elapsedTime;
 
-        // '* 60' 약간 오차있음
-        for (let i = 0; i < seconds * 60 / environment.timeScale; i++) {
-            arr.push(i);
+        while (environment.elapsedTime - startTime < seconds) {
+            yield 0;
         }
-
-        return arr;
     }
 }

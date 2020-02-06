@@ -29,50 +29,82 @@ export class Dynamics extends Component {
 
 export class Vehicle extends Component {
     private dynamic: Dynamics;
-    private currentRoadIndex: number;
-    private currentRoadProgress: number;
+    public acceleration: number;
+    public deceleration: number;
+    public safetyDistance: number;
+    public frontAgentDistance: number;
+    public brakingDistance: number;
+
+    private _currentLaneIndex: number;
+    private _currentWayIndex: number;
+    private _currentWayProgress: number;
+
+    public get currentLaneIndex(): number {
+        return this._currentLaneIndex;
+    }
+
+    public get currentWayIndex(): number {
+        return this._currentWayIndex;
+    }
+
+    public get currentWayProgress(): number {
+        return this._currentWayProgress;
+    }
 
     public constructor() {
         super();
 
         this.dynamic = new Dynamics();
-        this.currentRoadIndex = 0;
-        this.currentRoadProgress = 0;
+        this.acceleration = 0.1;
+        this.deceleration = 5;
+        this.safetyDistance = 10;
+        this.frontAgentDistance;
+        this.brakingDistance = 0;
+        this._currentLaneIndex = 0;
+        this._currentWayIndex = 0;
+        this._currentWayProgress = 0;
     }
 
     /**
      * @override
      */
     public do(agent: Agent): void {
-        // 더 좋은 알고리즘 있을거같음
-        
         if (agent.currentFacility instanceof Road) {
             let road = <Road> agent.currentFacility;
 
-            this.refreshAngle(agent, road);
-            this.refreshVelocity(agent, road);
+            let roadPointLength = road.getPointLength();
 
-            this.dynamic.do(agent);
+            if (this.currentWayIndex === roadPointLength - 1) {
+                this.onEndOfRoad(agent, road);
+            } else {
+                this.refreshAngle(agent, road);
+                this.refreshVelocity(agent, road);
 
-            this.currentRoadProgress = Vector2.inverseLerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), agent.transform.position);
+                this.dynamic.do(agent);
 
-            while (this.currentRoadProgress >= 1) {
-                this.currentRoadProgress -= 1;
-                this.currentRoadIndex++;
+                this._currentWayProgress = Vector2.inverseLerp(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1), agent.transform.position);
 
-                if (this.currentRoadIndex === road.getPointLength() - 1) {
-                    this.currentRoadIndex = 0;
-                    this.dynamic.velocity = Vector2.ZERO;
-                    road.portList[0].appendAgent(agent);
-                    break;
-                }
+                while (this.currentWayProgress >= 1) {
+                    this._currentWayProgress -= 1;
+                    this._currentWayIndex++;
 
-                this.currentRoadProgress = this.currentRoadProgress * Vector2.substract(road.getPoint(this.currentRoadIndex - 1), road.getPoint(this.currentRoadIndex)).magnitude / Vector2.substract(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1)).magnitude;
-                
-                if (this.currentRoadProgress < 1) {
-                    agent.transform.position = Vector2.lerp(road.getPoint(this.currentRoadIndex), road.getPoint(this.currentRoadIndex + 1), this.currentRoadProgress);
-                    this.refreshAngle(agent, road);
-                    this.refreshVelocity(agent, road);
+                    if (this.currentWayIndex === roadPointLength - 1) {
+                        this._currentWayProgress = 0;
+                        agent.transform.position = road.getPoint(this.currentLaneIndex, road.getPointLength() - 1);
+
+                        return;
+                    }
+
+                    this._currentWayProgress = this.currentWayProgress * Vector2.substract(road.getPoint(this.currentLaneIndex, this.currentWayIndex - 1), road.getPoint(this.currentLaneIndex, this.currentWayIndex)).magnitude / Vector2.substract(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1)).magnitude;
+
+                    if (this.currentWayProgress < 1) {
+                        this.refreshAngle(agent, road);
+                        //this.refreshVelocity(agent, road);
+
+                        agent.transform.position = Vector2.lerp(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1), this.currentWayProgress);
+                        
+                        break;
+                    }
                 }
             }
         }
@@ -82,14 +114,61 @@ export class Vehicle extends Component {
      * 해당 Road에 대한 Agent의 각도 설정
      */
     private refreshAngle(agent: Agent, road: Road): void {
-        let angle = road.getRoadAngle(this.currentRoadIndex);
+        let angle = road.getWayAngle(this.currentWayIndex);
         agent.transform.rotation = angle;
+
+        this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), this.dynamic.velocity.magnitude);
     }
 
     /**
      * 해당 Road에 대한 Agent의 속도 설정
      */
-    private refreshVelocity(agent: Agent,road: Road): void {
-        this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), road.speedLimit);
+    private refreshVelocity(agent: Agent, road: Road): void {
+        this.frontAgentDistance = road.getFrontAgentDistance(agent);
+
+        // 제동거리 계산 후 적절한 속도 구하기
+        this.brakingDistance = this.dynamic.velocity.sqrMagnitude / (2 * this.deceleration);
+        
+        let targetSpeed = 0;
+        // /let targetSpeed = frontDistance >= 0 ? Math.min(road.speedLimit, frontDistance - this.safetyDistance) : road.speedLimit;
+
+        if (this.frontAgentDistance >= 0 && this.frontAgentDistance < this.brakingDistance + this.safetyDistance) {
+            targetSpeed = 0;
+        } else {
+            targetSpeed = road.speedLimit;
+        }
+
+        if (this.dynamic.velocity.sqrMagnitude < targetSpeed * targetSpeed) {
+            this.dynamic.velocity = Vector2.add(this.dynamic.velocity, Vector2.multiply(agent.transform.forward(), this.acceleration));
+
+            if (this.dynamic.velocity.sqrMagnitude > targetSpeed * targetSpeed) {
+                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
+            }
+        } else if (this.dynamic.velocity.sqrMagnitude > targetSpeed * targetSpeed) {
+            let deltaVelocity = Vector2.multiply(agent.transform.forward(), this.deceleration);
+
+            if (this.dynamic.velocity.sqrMagnitude <= deltaVelocity.sqrMagnitude) {
+                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
+            } else {
+                this.dynamic.velocity = Vector2.substract(this.dynamic.velocity, deltaVelocity);
+            }
+            
+
+            if (this.dynamic.velocity.sqrMagnitude < targetSpeed * targetSpeed) {
+                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
+            }
+        }
+    }
+
+    /**
+     * 길 끝에 도달했을 시 호출
+     */
+    private onEndOfRoad(agent: Agent, road: Road): void {
+        let nextFacility = road.portList[0];
+
+        if (nextFacility.agentCount < nextFacility.maxCapacity) {
+            this._currentWayIndex = 0;
+            nextFacility.appendAgent(agent);
+        }
     }
 }

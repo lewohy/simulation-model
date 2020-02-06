@@ -74,6 +74,7 @@ export class SimulationModel extends Model {
 
         this.externalDestination = new ExternalDestination(this.environment);
         this.externalDestination.name = '외부 목적지';
+        this.externalDestination.maxCapacity = 10000;
         this.externalDestination.transform.position = new Vector2(800, 0);
 
         // 트럭 도착지 -> 대기실
@@ -135,7 +136,7 @@ export class SimulationModel extends Model {
         // 게이트웨이 -> 씨벌크용 라이너 준비실
         let ig2lpp = new Road(this.environment);
         {
-            let tmp1 = Vector2.add(this.inGateway.getSidePosition(0), new Vector2(0, 3));
+            let tmp1 = Vector2.add(this.inGateway.getSidePosition(0), new Vector2(0, 5));
             let tmp2 = this.linerPreparationPlace.getSidePosition(Math.PI);
             let tmp3 = Vector2.substract(tmp2, tmp1);
             ig2lpp.addPoint(tmp1);
@@ -149,7 +150,7 @@ export class SimulationModel extends Model {
         let lpp2wmp1 = new Road(this.environment);
         {
             let tmp1 = this.linerPreparationPlace.getSidePosition(0);
-            let tmp2 = Vector2.add(this.weightMesaurementPlace1.getSidePosition(Math.PI), new Vector2(0, 3));
+            let tmp2 = Vector2.add(this.weightMesaurementPlace1.getSidePosition(Math.PI), new Vector2(0, 5));
             let tmp3 = Vector2.substract(tmp2, tmp1);
             lpp2wmp1.addPoint(tmp1);
             lpp2wmp1.addPoint(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
@@ -163,7 +164,7 @@ export class SimulationModel extends Model {
         // 입구 게이트웨이 -> 도크용 제품 적재실
         let ig2dplp = new Road(this.environment);
         {
-            let tmp1 = Vector2.add(this.inGateway.getSidePosition(0), new Vector2(0, -3));
+            let tmp1 = Vector2.add(this.inGateway.getSidePosition(0), new Vector2(0, -5));
             let tmp2 = this.dockProductLoadingPlace.getSidePosition(Math.PI);
             let tmp3 = Vector2.substract(tmp2, tmp1);
             ig2dplp.addPoint(tmp1);
@@ -177,7 +178,7 @@ export class SimulationModel extends Model {
         let dplp2og = new Road(this.environment);
         {
             let tmp1 = this.dockProductLoadingPlace.getSidePosition(0);
-            let tmp2 = Vector2.add(this.outGateway.getSidePosition(Math.PI), new Vector2(0, -3));
+            let tmp2 = Vector2.add(this.outGateway.getSidePosition(Math.PI), new Vector2(0, -5));
             let tmp3 = Vector2.substract(tmp2, tmp1);
             dplp2og.addPoint(tmp1);
             dplp2og.addPoint(new Vector2(tmp1.x + tmp3.x / 3, tmp1.y));
@@ -258,10 +259,10 @@ class TruckGenerator extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let circle = new Circle(this.transform);
+        let circle = new Circle(this.transform.clone());
         renderer.draw(circle);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -367,10 +368,10 @@ class TruckDestination extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -415,10 +416,10 @@ class WaitingPlace extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -449,7 +450,7 @@ class InGateway extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.transform.position;
+        agent.transform.position = this.transform.position.clone();
 
         this.startCoroutine(this.checkTruck(<Truck> agent));
     }
@@ -465,10 +466,10 @@ class InGateway extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -529,10 +530,10 @@ class OutGateway extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -563,7 +564,7 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.transform.position;
+        agent.transform.position = this.transform.position.clone();
 
         this.startCoroutine(this.prepareLiner(<SeaBulkTruck> agent));
     }
@@ -579,10 +580,10 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -619,7 +620,7 @@ class WeightMesaurementPlace extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.transform.position;
+        agent.transform.position = this.transform.position.clone();
 
         this.startCoroutine(this.measureWeight(<Truck> agent));
     }
@@ -635,10 +636,10 @@ class WeightMesaurementPlace extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -675,7 +676,7 @@ class BulkProductLoadingPlace extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.transform.position;
+        agent.transform.position = this.transform.position.clone();
 
         this.startCoroutine(this.loadProduct(<Truck> agent));
     }
@@ -691,10 +692,10 @@ class BulkProductLoadingPlace extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -731,7 +732,7 @@ class DockProductLoadingPlace extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.transform.position;
+        agent.transform.position = this.transform.position.clone();
 
         this.startCoroutine(this.loadProduct(<DockTruck> agent));
     }
@@ -747,10 +748,10 @@ class DockProductLoadingPlace extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -791,7 +792,7 @@ class ExternalDestination extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.transform.position;
+        agent.transform.position = this.transform.position.clone();
     }
 
     /**
@@ -805,14 +806,14 @@ class ExternalDestination extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
 
-        let font2 = new Font(this.transform);
+        let font2 = new Font(this.transform.clone());
         font2.transform.position = Vector2.substract(font2.transform.position, new Vector2(0, 10));
         font2.text = '도착한 트럭 수: ' + this.agentCount;
         renderer.draw(font2);
@@ -864,7 +865,10 @@ abstract class Truck extends Agent {
      * @override
      */
     public onEnter(facility: Facility): void {
-        
+        if (facility instanceof Road) {
+            let road = <Road> facility;
+            this.transform.position = road.getPoint(0, 0).clone();
+        }
     }
 
     /**
@@ -887,7 +891,7 @@ class SeaBulkTruck extends Truck {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform, 'rgba(255, 0, 0, 0.2)');
+        let quad = new Quad(this.transform.clone(), 'rgba(255, 0, 0, 0.2)');
         renderer.draw(quad);
     }
     
@@ -919,7 +923,7 @@ class TankBulkTruck extends Truck {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform, 'rgba(0, 255, 0, 0.2)');
+        let quad = new Quad(this.transform.clone(), 'rgba(0, 255, 0, 0.2)');
         renderer.draw(quad);
     }
     
@@ -956,7 +960,7 @@ class DockTruck extends Truck {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform, this.type == DockTruck.LOOSE_BAG ? 'rgba(0, 0, 255, 0.2)' : 'rgba(0, 128, 255, 0.2)');
+        let quad = new Quad(this.transform.clone(), this.type == DockTruck.LOOSE_BAG ? 'rgba(0, 0, 255, 0.2)' : 'rgba(0, 128, 255, 0.2)');
         renderer.draw(quad);
     }
     

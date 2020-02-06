@@ -28,9 +28,9 @@ export class TestModel extends Model {
         road.speedLimit = 10;
         road.addPoint(tmp);
         road.addPoint(Vector2.add(tmp, new Vector2(10, 0)));
-        road.addPoint(Vector2.add(tmp, new Vector2(20, -10)));
-        road.addPoint(Vector2.add(tmp, new Vector2(30, 10)));
-        road.addPoint(Vector2.add(tmp, new Vector2(40, -10)));
+        road.addPoint(Vector2.add(tmp, new Vector2(20, 20)));
+        road.addPoint(Vector2.add(tmp, new Vector2(10, 10)));
+        road.addPoint(Vector2.add(tmp, new Vector2(10, 50)));
         road.addPoint(Vector2.add(tmp, new Vector2(50, 10)));
         road.addPoint(Vector2.add(tmp, new Vector2(60, -10)));
         road.addPoint(Vector2.add(tmp, new Vector2(70, 0)));
@@ -48,14 +48,11 @@ export class TestModel extends Model {
 
 
 class TruckGenerator extends Facility {
-    private time: number;
 
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'TruckGenerator';
-
-        this.time = 0;
     }
 
     /**
@@ -76,10 +73,10 @@ class TruckGenerator extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
     }
@@ -95,37 +92,41 @@ class TruckGenerator extends Facility {
      * @override
      */
     public onUpdate(): void {
-
-        if (this.time > 1) {
-            this.time = 0;
-            let truck = new SeaBulkTruck(this.environment);
-            truck.register();
-            this.portList[0].appendAgent(truck);
-        }
-
-        this.time += this.environment.deltaTime;
+        
+        
     }
 
     private *test(): any {
         while (true) {
             yield* Wait.forSeconds(this.environment, 1);
             console.log(this.environment.elapsedTime);
+            let truck = new SeaBulkTruck(this.environment);
+            truck.register();
+            this.portList[0].appendAgent(truck);
         }
     }
 }
 
 class TestFacility extends Facility {
+    private count: number;
+
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'TestFacility';
+        this.maxCapacity = 5;
+        this.count = 0;
     }
 
     /**
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.transform.position;
+        this.count++;
+
+        agent.transform.position = this.transform.position.clone();
+
+        this.startCoroutine(this.coroutine(agent));
     }
 
     /**
@@ -139,16 +140,16 @@ class TestFacility extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-        let quad = new Quad(this.transform);
+        let quad = new Quad(this.transform.clone());
         renderer.draw(quad);
 
-        let font = new Font(this.transform);
+        let font = new Font(this.transform.clone());
         font.text = this.name;
         renderer.draw(font);
 
-        let font2 = new Font(this.transform);
+        let font2 = new Font(this.transform.clone());
         font2.transform.position = Vector2.add(font2.transform.position, new Vector2(0, -5));
-        font2.text = 'Agent count: ' + this.agentCount;
+        font2.text = 'Agent count: ' + this.count;
         renderer.draw(font2);
     }
 
@@ -164,6 +165,12 @@ class TestFacility extends Facility {
      */
     public onUpdate(): void {
         
+    }
+
+    private *coroutine(agent: Agent): any {
+        yield* Wait.forSeconds(this.environment, 10);
+
+        agent.unregister();
     }
 }
 
@@ -198,7 +205,10 @@ abstract class Truck extends Agent {
      * @override
      */
     public onEnter(facility: Facility): void {
-        
+        if (facility instanceof Road) {
+            let road = <Road> facility;
+            this.transform.position = road.getPoint(0, 0).clone();
+        }
     }
 
     /**
@@ -223,6 +233,28 @@ class SeaBulkTruck extends Truck {
     public render(renderer: Renderer): void {
         let quad = new Quad(this.transform, 'rgba(255, 0, 0, 0.2)');
         renderer.draw(quad);
+
+        let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
+        font.text = '필요 제동 거리: ' + Math.floor(this.vehicle.brakingDistance);
+        renderer.draw(font);
+
+        let tmp = this.transform.clone();
+        tmp.position.y -= 1.5;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = '가속도: ' + this.vehicle.acceleration;
+        renderer.draw(font);
+
+        tmp = this.transform.clone();
+        tmp.position.y -= 3;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = '앞 차와의 간격: ' + Math.floor(this.vehicle.frontAgentDistance);
+        renderer.draw(font);
+
+        tmp = this.transform.clone();
+        tmp.position.y -= 4.5;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = '감속도: ' + this.vehicle.deceleration;
+        renderer.draw(font);
     }
     
     /**
