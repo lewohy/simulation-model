@@ -29,7 +29,7 @@ export class Renderer {
 
         this.cameraPosition = new Vector2(0, 0);
         this.zoomSize = 10;
-
+        this._focused = this.environment;
         
         this.running = true;
 
@@ -73,7 +73,7 @@ export class Renderer {
         if (picture instanceof Path) {
             this.drawPath(picture);
         } else if (picture instanceof Font) {
-            this.drawFont(picture);
+            //this.drawFont(picture);
         } else if (picture instanceof Quad) {
             this.drawQuad(picture);
         } else if (picture instanceof Circle) {
@@ -111,7 +111,7 @@ export class Renderer {
      */
     private drawFont(font: Font): void {
         this.canvas.fillStyle = font.color;
-        this.canvas.font = font + 'px';
+        this.canvas.font = font.size * this.zoomSize + 'px Arial';
 
         let textMatrics = this.canvas.measureText(font.text);
         

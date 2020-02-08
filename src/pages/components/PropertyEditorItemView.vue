@@ -18,7 +18,7 @@ export default Vue.extend({
     props: {
         propertyName: String,
         propertyValue: [String, Number],
-        onClick: Function
+        onClick: Function,
     },
     methods: {
         

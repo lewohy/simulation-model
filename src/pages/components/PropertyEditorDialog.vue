@@ -1,6 +1,8 @@
 <template>
     <div>
-        <div id="component" @keydown.esc="onCancel">
+        <div id="component"
+            @keydown.esc="onCancel"
+            @keydown.enter="onApply(propertyName, value)">
             <div id="dialog-area">
                 <div id="title-view">
                     {{ propertyName }}

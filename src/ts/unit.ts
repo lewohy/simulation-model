@@ -5,13 +5,21 @@ import { Path, Quad } from './drawer';
 
 export class Environment {
     public static readonly MAX_TICK = 17;
+    public static readonly FIXED_DELTA_TIME = 0.005;
     public static readonly EPSILON_DELAY = 5;
 
     private _tick: number;
     private _elapsedTime: number;
-    public timeScale: number;
+    private _timeScale: number;
     private _deltaTime: number;
+    private _frame: number;
+    private _oldTime: number;
+    private _currentTime: number;
     public readonly unitList: Array<Unit>;
+
+    public get tick(): number {
+        return this._tick;
+    }
 
     public get elapsedTime(): number {
         return this._elapsedTime;
@@ -21,28 +29,53 @@ export class Environment {
         return this._deltaTime;
     }
 
+    public get timeScale(): number {
+        return this._timeScale;
+    }
+
+    public set timeScale(value: number) {
+        this._timeScale = value;
+    }
+
+    public get frame(): number {
+        return this._frame;
+    }
+
     public constructor() {
         this._tick = 0;
         this._elapsedTime = 0;
-        this.timeScale = 1;
+        this._deltaTime = 0;
+        this._timeScale = 1;
+        this._frame = 1;
+        this._oldTime = Date.now();
+        this._currentTime = Date.now();
         this.unitList = new Array<Unit>();
 
         setInterval(() => {
             this._tick += Environment.EPSILON_DELAY;
             
             if (this._tick >= Environment.MAX_TICK) {
-                this._tick = 0;
-                this._deltaTime = this.timeScale / 60;
-                this._elapsedTime += this.deltaTime;
-                
-                this.unitList.forEach(unit => {
-                    if (unit instanceof Agent) {
-                        unit.applyComponents();
-                    }
+                this._currentTime = Date.now();
+                this._frame = Math.round(1 / ((this._currentTime - this._oldTime) * 0.001));
 
-                    unit.onUpdate();
-                    unit.runCoroutine();
-                });
+                this._tick = 0;
+                let jumpedTime = this.timeScale / 60;
+
+                for (let i = 0; i < jumpedTime; i += Environment.FIXED_DELTA_TIME) {
+                    this._deltaTime = Environment.FIXED_DELTA_TIME;
+                    this._elapsedTime += this._deltaTime;
+                    
+                    this.unitList.forEach(unit => {
+                        if (unit instanceof Agent) {
+                            unit.applyComponents();
+                        }
+
+                        unit.onUpdate();
+                        unit.runCoroutine();
+                    });
+                }
+
+                this._oldTime = this._currentTime;
             }
         }, Environment.EPSILON_DELAY);
     }
@@ -297,11 +330,27 @@ export class Road extends Facility {
     public static readonly LANE_WIDTH = 2;
 
     private readonly pointList: Array<Vector2>;
+    private lanePointList: Array<Array<Vector2>>;
+    private leftLaneBoundaryPointList: Array<Array<Vector2>>;
+    private righttLaneBoundaryPointList: Array<Array<Vector2>>;
     private _laneCount: number;
-    public speedLimit: number;
+    public _speedLimit: number;
 
     public get laneCount(): number {
         return this._laneCount;
+    }
+
+    public set laneCount(value: number) {
+        this._laneCount = value;
+        this.refreshLanePointList();
+    }
+
+    public get speedLimit(): number {
+        return this._speedLimit;
+    }
+
+    public set speedLimit(value: number) {
+        this._speedLimit = value;
     }
 
     public constructor(environment: Environment) {
@@ -344,10 +393,10 @@ export class Road extends Facility {
                 let rightLine = new Path(this.transform.clone(), 'rgba(0, 128, 0, 1)');
                 rightLine.width = 0.1;
                 
-                for (let j = 0; j < this.getPointLength(); j++) {
+                for (let j = 0; j < this.pointList.length; j++) {
                     path.pointList.push(this.getPoint(i, j));
-                    leftLine.pointList.push(this.getPoint(i - 0.5, j));
-                    rightLine.pointList.push(this.getPoint(i + 0.5 , j));
+                    leftLine.pointList.push(this.getLeftLaneBoundaryPoint(i, j));
+                    rightLine.pointList.push(this.getRightLaneBoundaryPoint(i, j));
                 }
 
                 renderer.draw(path);
@@ -414,6 +463,8 @@ export class Road extends Facility {
         if (tmp.y > Road.LANE_WIDTH * this.laneCount) {
             this.transform.scale.x = tmp.y;
         }
+        
+        this.refreshLanePointList();
     }
 
     /**
@@ -421,20 +472,21 @@ export class Road extends Facility {
      * @param index 
      */
     public getPoint(lane: number, index: number): Vector2 {
-        let currentPoint = this.pointList[index];
-        let angle: number;
-        let radius: number;
+        return this.lanePointList[lane][index];
+    }
 
-        if (index === 0 || index >= this.getPointLength() - 1) {
-            angle = Math.PI / 2 + this.getWayAngle(index);
-            radius = ((this.laneCount - 1) / 2 - lane) * Road.LANE_WIDTH;
-        } else {
-            angle = (Math.PI + this.getWayAngle(index) + this.getWayAngle(index - 1)) / 2;
-            radius = ((this.laneCount - 1) / 2 - lane) * Road.LANE_WIDTH / Math.sin(angle - this.getWayAngle(index));
-        }
+    /**
+     * 왼쪽 차선 경계 반환
+     */
+    public getLeftLaneBoundaryPoint(lane: number, index: number): Vector2 {
+        return this.leftLaneBoundaryPointList[lane][index];
+    }
 
-        //console.log(index);
-        return Vector2.add(currentPoint, new Vector2(radius * Math.cos(angle), radius * Math.sin(angle)));
+    /**
+     * 오른쪽 차선 경계 반환
+     */
+    public getRightLaneBoundaryPoint(lane: number, index: number): Vector2 {
+        return this.righttLaneBoundaryPointList[lane][index];
     }
 
     /**
@@ -496,7 +548,6 @@ export class Road extends Facility {
                 distance += this.getWayLength(vehicle.currentLaneIndex, i);
             }
 
-            //console.log(this.pointList.length, vehicle.currentWayIndex);
             distance += this.getWayLength(vehicle.currentLaneIndex, vehicle.currentWayIndex) * vehicle.currentWayProgress;
 
             return distance;
@@ -510,6 +561,7 @@ export class Road extends Facility {
      * @param vehicle 
      */
     public getFrontAgentDistance(agent: Agent): number {
+        
         let standardVehicle = agent.getComponent(Vehicle);
         let standardDistance = this.getMovedDistance(agent);
 
@@ -532,7 +584,51 @@ export class Road extends Facility {
                 return distanceList[i] - standardDistance;
             }
         }
-
+        
         return -1;
+    }
+
+    /**
+     * 모든 Lane에 대한 Point 새로고침
+     * 실시간 계산을 하지 않기 위해 캐싱하는 용도
+     */
+    private refreshLanePointList(): void {
+        this.lanePointList = new Array<Array<Vector2>>();
+        this.leftLaneBoundaryPointList = new Array<Array<Vector2>>();
+        this.righttLaneBoundaryPointList = new Array<Array<Vector2>>();
+
+        for (let lane = 0; lane < this.laneCount; lane++) {
+            let centerLanePointList = new Array<Vector2>();
+            let leftLanePointList = new Array<Vector2>();
+            let rightLanePointList = new Array<Vector2>();
+
+            for (let index = 0; index < this.pointList.length; index++) {
+                let currentPoint = this.pointList[index];
+                let angle: number;
+                let radius: number;
+                let lbRadius: number;
+                let rbRadius: number;
+        
+                if (index === 0 || index >= this.getPointLength() - 1) {
+                    angle = Math.PI / 2 + this.getWayAngle(index);
+                    radius = ((this.laneCount - 1) / 2 - lane) * Road.LANE_WIDTH;
+                    lbRadius = ((this.laneCount - 1) / 2 - (lane - 0.5)) * Road.LANE_WIDTH;
+                    rbRadius = ((this.laneCount - 1) / 2 - (lane + 0.5)) * Road.LANE_WIDTH;
+                } else {
+                    angle = (Math.PI + this.getWayAngle(index) + this.getWayAngle(index - 1)) / 2;
+                    radius = ((this.laneCount - 1) / 2 - lane) * Road.LANE_WIDTH / Math.sin(angle - this.getWayAngle(index));
+                    lbRadius = ((this.laneCount - 1) / 2 - (lane - 0.5)) * Road.LANE_WIDTH / Math.sin(angle - this.getWayAngle(index));
+                    rbRadius = ((this.laneCount - 1) / 2 - (lane + 0.5)) * Road.LANE_WIDTH / Math.sin(angle - this.getWayAngle(index));
+                }
+
+                centerLanePointList.push(Vector2.add(currentPoint, new Vector2(radius * Math.cos(angle), radius * Math.sin(angle))));
+                leftLanePointList.push(Vector2.add(currentPoint, new Vector2(lbRadius * Math.cos(angle), lbRadius * Math.sin(angle))));
+                rightLanePointList.push(Vector2.add(currentPoint, new Vector2(rbRadius * Math.cos(angle), rbRadius * Math.sin(angle))));
+            }
+
+            this.lanePointList.push(centerLanePointList);
+            this.leftLaneBoundaryPointList.push(leftLanePointList);
+            this.righttLaneBoundaryPointList.push(rightLanePointList);
+        }
     }
 }

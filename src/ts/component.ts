@@ -51,6 +51,10 @@ export class Vehicle extends Component {
         return this._currentWayProgress;
     }
 
+    public get velocity(): number {
+        return this.dynamic.velocity.magnitude;
+    }
+
     public constructor() {
         super();
 
@@ -124,13 +128,14 @@ export class Vehicle extends Component {
      * 해당 Road에 대한 Agent의 속도 설정
      */
     private refreshVelocity(agent: Agent, road: Road): void {
+        //this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), road.speedLimit);
+        
+        // 렉 발생 원인인듯
         this.frontAgentDistance = road.getFrontAgentDistance(agent);
 
-        // 제동거리 계산 후 적절한 속도 구하기
         this.brakingDistance = this.dynamic.velocity.sqrMagnitude / (2 * this.deceleration);
         
         let targetSpeed = 0;
-        // /let targetSpeed = frontDistance >= 0 ? Math.min(road.speedLimit, frontDistance - this.safetyDistance) : road.speedLimit;
 
         if (this.frontAgentDistance >= 0 && this.frontAgentDistance < this.brakingDistance + this.safetyDistance) {
             targetSpeed = 0;
@@ -138,13 +143,15 @@ export class Vehicle extends Component {
             targetSpeed = road.speedLimit;
         }
 
-        if (this.dynamic.velocity.sqrMagnitude < targetSpeed * targetSpeed) {
+        let sqrTargetSpeed = targetSpeed * targetSpeed;
+
+        if (this.dynamic.velocity.sqrMagnitude < sqrTargetSpeed) {
             this.dynamic.velocity = Vector2.add(this.dynamic.velocity, Vector2.multiply(agent.transform.forward(), this.acceleration));
 
-            if (this.dynamic.velocity.sqrMagnitude > targetSpeed * targetSpeed) {
+            if (this.dynamic.velocity.sqrMagnitude > sqrTargetSpeed) {
                 this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
             }
-        } else if (this.dynamic.velocity.sqrMagnitude > targetSpeed * targetSpeed) {
+        } else if (this.dynamic.velocity.sqrMagnitude > sqrTargetSpeed) {
             let deltaVelocity = Vector2.multiply(agent.transform.forward(), this.deceleration);
 
             if (this.dynamic.velocity.sqrMagnitude <= deltaVelocity.sqrMagnitude) {
@@ -154,7 +161,7 @@ export class Vehicle extends Component {
             }
             
 
-            if (this.dynamic.velocity.sqrMagnitude < targetSpeed * targetSpeed) {
+            if (this.dynamic.velocity.sqrMagnitude < sqrTargetSpeed) {
                 this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
             }
         }

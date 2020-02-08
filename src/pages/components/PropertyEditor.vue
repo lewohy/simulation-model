@@ -4,7 +4,20 @@
             <div id="name-view">
                 {{ objName }}
             </div>
-            <property-editor-item-view v-for="propertyData in propertyList"
+            
+            <property-editor-item-view v-for="propertyData in roPropertyList"
+                :key="propertyData.propertyName"
+                :property-name="propertyData.propertyName"
+                :property-value="propertyData.propertyValue"
+                :on-click="() => {}">
+                
+            </property-editor-item-view>
+            
+            <div id="rw-ro-divider">
+
+            </div>
+
+            <property-editor-item-view v-for="propertyData in rwPropertyList"
                 :key="propertyData.propertyName"
                 :property-name="propertyData.propertyName"
                 :property-value="propertyData.propertyValue"
@@ -30,6 +43,7 @@ import PropertyEditorItemView from './PropertyEditorItemView.vue';
 import PropertyEditorDialog from './PropertyEditorDialog.vue';
 import { Model } from '../../ts/model';
 import { Unit } from '../../ts/unit';
+import Util from '../../ts/util';
 
 export default Vue.extend({
     components: {
@@ -42,8 +56,9 @@ export default Vue.extend({
     data: function() {
         return {
             obj: <object> null,
-            objName: <String> null,
-            propertyList: new Array<object>(),
+            objName: <string> null,
+            rwPropertyList: new Array<object>(),
+            roPropertyList: new Array<object>(),
             editingPropertyName: <String> null
         };
     },
@@ -53,10 +68,14 @@ export default Vue.extend({
                 if (this.obj != this.model.renderer.focused) {
                     this.reset();
                 }
-
+                
                 if (this.obj) {
-                    for (let i = 0; i < this.propertyList.length; i++) {
-                        this.propertyList[i]['propertyValue'] = this.obj[this.propertyList[i]['propertyName']];
+                    for (let i = 0; i < this.rwPropertyList.length; i++) {
+                        this.rwPropertyList[i]['propertyValue'] = this.obj[this.rwPropertyList[i]['propertyName']];
+                    }
+
+                    for (let i = 0; i < this.roPropertyList.length; i++) {
+                        this.roPropertyList[i]['propertyValue'] = this.obj[this.roPropertyList[i]['propertyName']];
                     }
                 }
             }
@@ -67,14 +86,26 @@ export default Vue.extend({
             this.obj = this.model.renderer.focused;
 
             this.objName = this.obj.constructor.name;
-            this.propertyList = new Array<object>();
+            this.rwPropertyList = new Array<object>();
+            this.roPropertyList = new Array<object>();
 
             for (let propertyName in this.obj) {
-                let descriptor = Object.getOwnPropertyDescriptor(this.obj, propertyName);
-                if (descriptor && descriptor.configurable) {
+                let descriptor = Util.getPropertyDescriptor(this.obj, propertyName);
+
+                if (descriptor && descriptor.get && descriptor.set) {
                     let propertyValue = this.obj[propertyName];
-                    if (['string', 'number'].indexOf(typeof(propertyValue)) > -1) {
-                        this.propertyList.push({
+
+                    if (!propertyName.startsWith('_') && ['string', 'number'].indexOf(typeof(propertyValue)) > -1) {
+                        this.rwPropertyList.push({
+                            propertyName: propertyName,
+                            propertyValue: propertyValue
+                        });
+                    }
+                } else if (descriptor && descriptor.get && !descriptor.set) {
+                    let propertyValue = this.obj[propertyName];
+
+                    if (!propertyName.startsWith('_') && ['string', 'number'].indexOf(typeof(propertyValue)) > -1) {
+                        this.roPropertyList.push({
                             propertyName: propertyName,
                             propertyValue: propertyValue
                         });
@@ -105,14 +136,20 @@ export default Vue.extend({
             this.editingPropertyName = null;
         },
         getPropertyValue: function(propertyName: string) {
-            for (let i = 0; i < this.propertyList.length; i++) {
-                let propertyData = this.propertyList[i];
+            for (let i = 0; i < this.rwPropertyList.length; i++) {
+                let propertyData = this.rwPropertyList[i];
                 if (propertyData.propertyName === propertyName) {
                     return propertyData.propertyValue;
                 }
             }
 
-            console.log('a')
+            for (let i = 0; i < this.roPropertyList.length; i++) {
+                let propertyData = this.roPropertyList[i];
+                if (propertyData.propertyName === propertyName) {
+                    return propertyData.propertyValue;
+                }
+            }
+
             return null;
         }
     }
@@ -136,10 +173,17 @@ export default Vue.extend({
     font-size: 20px;
 }
 
+
 #property-editor-item-view {
     width: 100%;
     height: auto;
     margin-bottom: 4px;
+}
+
+#rw-ro-divider {
+    width: 100%;
+    height: 2px;
+    background-color: #8F8F8F;
 }
 
 .dialog-fade-enter-active, .dialog-fade-leave-active {
