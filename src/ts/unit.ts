@@ -5,7 +5,7 @@ import { Path, Quad } from './drawer';
 
 export class Environment {
     public static readonly MAX_TICK = 17;
-    public static readonly FIXED_DELTA_TIME = 0.005;
+    public static readonly FIXED_DELTA_TIME = 0.01;
     public static readonly EPSILON_DELAY = 5;
 
     private _tick: number;
@@ -250,6 +250,13 @@ export abstract class Facility extends Unit {
      * @param agent 나간 Agent
      */
     public abstract onAgentOut(agent: Agent): void;
+
+    /**
+     * 해당 시설 안에 들어갈 수 있는지 여부 반환
+     */
+    public canEnter(): boolean {
+        return this.agentCount < this.maxCapacity;
+    }
 }
 
 /**
@@ -334,7 +341,8 @@ export class Road extends Facility {
     private leftLaneBoundaryPointList: Array<Array<Vector2>>;
     private righttLaneBoundaryPointList: Array<Array<Vector2>>;
     private _laneCount: number;
-    public _speedLimit: number;
+    private _speedLimit: number;
+    private vehicleList: Array<Array<Vehicle>>;
 
     public get laneCount(): number {
         return this._laneCount;
@@ -368,14 +376,22 @@ export class Road extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        
+        this.vehicleList = new Array<Array<Vehicle>>();
+
+        if (agent.getComponent(Vehicle)) {
+            this.refreshVehicleList();
+        }
     }
     
     /**
      * @override
      */
     public onAgentOut(agent: Agent): void {
-        
+        this.vehicleList = new Array<Array<Vehicle>>();
+
+        if (agent.getComponent(Vehicle)) {
+            this.refreshVehicleList();
+        }
     }
 
     /**
@@ -535,57 +551,27 @@ export class Road extends Facility {
     }
 
     /**
-     * 이동한 거리 반환
-     * @param agent 
-     */
-    public getMovedDistance(agent: Agent): number {
-        let vehicle = agent.getComponent(Vehicle);
-
-        if (vehicle) {
-            let distance = 0;
-
-            for (let i = 0; i < vehicle.currentWayIndex; i++) {
-                distance += this.getWayLength(vehicle.currentLaneIndex, i);
-            }
-
-            distance += this.getWayLength(vehicle.currentLaneIndex, vehicle.currentWayIndex) * vehicle.currentWayProgress;
-
-            return distance;
-        }
-
-        return 0;
-    }
-
-    /**
      * 해당 agent 바로앞의 agent와의 거리 반환
      * @param vehicle 
      */
     public getFrontAgentDistance(agent: Agent): number {
         
         let standardVehicle = agent.getComponent(Vehicle);
-        let standardDistance = this.getMovedDistance(agent);
+        let standardDistance = standardVehicle.getMovedDistance(this);
 
-        let distanceList = this.agentList.filter(a => {
-            let vehicle = a.getComponent(Vehicle);
+        let result = -1;
 
-            if (vehicle && vehicle.currentLaneIndex === standardVehicle.currentLaneIndex) {
-                return true;
-            }
+        let list = this.vehicleList[standardVehicle.currentLaneIndex];
 
-            return false;
-        }).map(a => {
-            return this.getMovedDistance(a);
-        }).sort((a, b) => {
-            return a - b;
-        });
+        for (let i = 0; i < list.length; i ++) {
+            let distance = list[i].getMovedDistance(this);
 
-        for (let i = 0; i < distanceList.length; i++) {
-            if (distanceList[i] > standardDistance) {
-                return distanceList[i] - standardDistance;
+            if ((result == -1 || distance < result) && distance > standardDistance) {
+                result = distance;
             }
         }
         
-        return -1;
+        return result == -1 ? -1 : (result - standardDistance);
     }
 
     /**
@@ -609,8 +595,12 @@ export class Road extends Facility {
                 let lbRadius: number;
                 let rbRadius: number;
         
-                if (index === 0 || index >= this.getPointLength() - 1) {
-                    angle = Math.PI / 2 + this.getWayAngle(index);
+                if (index === 0 || index == this.getPointLength() - 1) {
+                    if(index == this.getPointLength() - 1) {
+                        angle = Math.PI / 2 + this.getWayAngle(index - 1);
+                    } else {
+                        angle = Math.PI / 2 + this.getWayAngle(index);
+                    }
                     radius = ((this.laneCount - 1) / 2 - lane) * Road.LANE_WIDTH;
                     lbRadius = ((this.laneCount - 1) / 2 - (lane - 0.5)) * Road.LANE_WIDTH;
                     rbRadius = ((this.laneCount - 1) / 2 - (lane + 0.5)) * Road.LANE_WIDTH;
@@ -629,6 +619,24 @@ export class Road extends Facility {
             this.lanePointList.push(centerLanePointList);
             this.leftLaneBoundaryPointList.push(leftLanePointList);
             this.righttLaneBoundaryPointList.push(rightLanePointList);
+        }
+    }
+
+    /**
+     * 모든 Vehicle를 가진 리스트 재분류
+     * 실시간 계산을 하지 않기 위해 캐싱하는 용도
+     */
+    private refreshVehicleList(): void {
+        for (let i = 0; i < this.laneCount; i++) {
+            this.vehicleList[i] = new Array<Vehicle>();
+        }
+
+        for (let i = 0; i < this.agentCount; i++) {
+            let vehicle = this.agentList[i].getComponent(Vehicle);
+
+            if (vehicle) {
+                this.vehicleList[vehicle.currentLaneIndex].push(vehicle);
+            }
         }
     }
 }

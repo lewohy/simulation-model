@@ -73,7 +73,7 @@ export class Renderer {
         if (picture instanceof Path) {
             this.drawPath(picture);
         } else if (picture instanceof Font) {
-            //this.drawFont(picture);
+            this.drawFont(picture);
         } else if (picture instanceof Quad) {
             this.drawQuad(picture);
         } else if (picture instanceof Circle) {
@@ -170,7 +170,7 @@ export class Renderer {
         
         this.canvas.beginPath();
         this.canvas.ellipse
-        this.canvas.ellipse(convertedPosition.x ,convertedPosition.y, convertedScale.x, convertedScale.y, circle.transform.rotation, 0, 2 * Math.PI);
+        this.canvas.ellipse(convertedPosition.x ,convertedPosition.y, convertedScale.x / 2, convertedScale.y / 2, circle.transform.rotation, 0, 2 * Math.PI);
 
         if (circle.strokeWidth > 0) {
             this.canvas.lineWidth = circle.strokeWidth;

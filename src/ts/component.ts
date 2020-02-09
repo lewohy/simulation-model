@@ -6,7 +6,7 @@ export abstract class Component {
 }
 
 /**
- * 역학 관련 처리를 수행하는 클래스
+ * 역학 관련 처리를 수행하는 컴포넌트
  */
 export class Dynamics extends Component {
     public velocity: Vector2;
@@ -27,6 +27,9 @@ export class Dynamics extends Component {
     }
 }
 
+/**
+ * Road위의 Agent를 관리하기 위한 컴포넌트
+ */
 export class Vehicle extends Component {
     private dynamic: Dynamics;
     public acceleration: number;
@@ -115,6 +118,22 @@ export class Vehicle extends Component {
     }
 
     /**
+     * 이동한 거리 반환
+     * @param agent 
+     */
+    public getMovedDistance(road: Road): number {
+        let distance = 0;
+
+        for (let i = 0; i < this.currentWayIndex; i++) {
+            distance += road.getWayLength(this.currentLaneIndex, i);
+        }
+
+        distance += road.getWayLength(this.currentLaneIndex, this.currentWayIndex) * this.currentWayProgress;
+
+        return distance;
+    }
+
+    /**
      * 해당 Road에 대한 Agent의 각도 설정
      */
     private refreshAngle(agent: Agent, road: Road): void {
@@ -131,6 +150,7 @@ export class Vehicle extends Component {
         //this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), road.speedLimit);
         
         // 렉 발생 원인인듯
+        
         this.frontAgentDistance = road.getFrontAgentDistance(agent);
 
         this.brakingDistance = this.dynamic.velocity.sqrMagnitude / (2 * this.deceleration);
@@ -173,7 +193,7 @@ export class Vehicle extends Component {
     private onEndOfRoad(agent: Agent, road: Road): void {
         let nextFacility = road.portList[0];
 
-        if (nextFacility.agentCount < nextFacility.maxCapacity) {
+        if (nextFacility.canEnter()) {
             this._currentWayIndex = 0;
             nextFacility.appendAgent(agent);
         }

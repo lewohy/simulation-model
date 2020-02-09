@@ -28,8 +28,10 @@ export class TestModel extends Model {
         road.speedLimit = 10;
         road.addPoint(tmp);
         road.addPoint(Vector2.add(tmp, new Vector2(10, 0)));
-        road.addPoint(Vector2.add(tmp, new Vector2(20, 50)));
-        road.addPoint(Vector2.add(tmp, new Vector2(460, 50)));
+        road.addPoint(Vector2.add(tmp, new Vector2(10, 50)));
+        road.addPoint(Vector2.add(tmp, new Vector2(0, 50)));
+        road.addPoint(Vector2.add(tmp, new Vector2(0, 70)));
+        road.addPoint(Vector2.add(tmp, new Vector2(460, 70)));
         road.addPoint(Vector2.add(tmp, new Vector2(470, 0)));
         road.addPoint(testFacility.getSidePosition(Math.PI));
         road.portList.push(testFacility);
