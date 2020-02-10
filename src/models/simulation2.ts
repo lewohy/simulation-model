@@ -520,6 +520,7 @@ class InGateway extends Facility {
         super(environment);
 
         this.name = 'Gateway';
+        this.maxCapacity = 3;
     }
 
     /**

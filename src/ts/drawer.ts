@@ -16,7 +16,7 @@ export abstract class Shape extends Picture {
 
 export class Font extends Picture {
     public text: string;
-    public size: number = 1;
+    public size: number = 2;
 
     public constructor(transform: Transform, color: string = 'rgba(0, 0, 0, 1)') {
         super(transform, color);

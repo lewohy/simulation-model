@@ -34,7 +34,7 @@ export class SimulationModel extends Model {
     protected setup(): void {
         this.truckGenerator = new TruckGenerator(this.environment);
         this.truckGenerator.name = '트럭 생성기';
-        this.truckGenerator.transform.position = new Vector2(-20, 0);
+        this.truckGenerator.transform.position = new Vector2(-100, 0);
 
         this.truckDestination = new TruckDestination(this.environment);
         this.truckDestination.name = '트럭 도착지';

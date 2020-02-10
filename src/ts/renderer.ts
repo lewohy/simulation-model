@@ -228,7 +228,7 @@ export class Renderer {
      */
     private setupEvent(): void {
         this.element.addEventListener('wheel', e => {
-            this.zoomSize -= e.deltaY / Math.abs(e.deltaY);
+            this.zoomSize -= e.deltaY / Math.abs(e.deltaY) * 0.25;
 
             if (this.zoomSize <= 0) {
                 this.zoomSize = 1;
