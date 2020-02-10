@@ -347,35 +347,63 @@ class TruckGenerator extends Facility {
      * @override
      */
     public onStart(): void {
-        /*
-        let truck = new DockTruck(this.environment);
-        truck.register();
-        this.portList[0].appendAgent(truck);
-        */
+        let dockTruckRatio = 0.8;
+        let bulkTruckRatio = 0.2;
+
+        let looseBackRatio = 0.15;
+        let palletRatio = 0.85;
+
+        let seaBulkRatio = 0.15;
+        let tankBulkRatio = 0.85;
         
-        for (let i = 0; i < 162; i++) {
-            let timeData = new TruckArrivalData(Math.random() * 43200, TruckArrivalData.TRUCK_KIND_SEA_BULK);
-            this.truckArrivalTimeDataList.push(timeData);
+        let duration = 12 * 60 * 60;
+        let averageArrivalCount = 591;
+        let averageDelay = duration / averageArrivalCount;
+        let nextDelay = random.exponential(1 / averageDelay);
+
+        let arrivalTimeList = new Array<number>();
+        let arrivalTimeDataList = new Array<TruckArrivalData>();
+
+        for (let time = nextDelay(); time < duration; time += nextDelay()) {
+            arrivalTimeList.push(time);
+        }
+        console.log(arrivalTimeList.length);
+
+        let arrivalTruckCount = arrivalTimeList.length;
+        
+        for (let i = 0; i < Math.round(arrivalTruckCount * dockTruckRatio * looseBackRatio); i++) {
+            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length - 1), 1)[0];
+            
+            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG);
+            arrivalTimeDataList.push(timeData);
+        }
+        
+        for (let i = 0; i < Math.round(arrivalTruckCount * dockTruckRatio * palletRatio); i++) {
+            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
+            
+            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_PALLET);
+            arrivalTimeDataList.push(timeData);
+        }
+        
+        for (let i = 0; i < Math.round(arrivalTruckCount * bulkTruckRatio * tankBulkRatio); i++) {
+            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
+            
+            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_TANK_BULK);
+            arrivalTimeDataList.push(timeData);
+        }
+        
+        for (; arrivalTimeList.length;) {
+            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
+            
+            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_SEA_BULK);
+            arrivalTimeDataList.push(timeData);
         }
 
-        for (let i = 0; i < 70; i++) {
-            let timeData = new TruckArrivalData(Math.random() * 43200, TruckArrivalData.TRUCK_KIND_TANK_BULK);
-            this.truckArrivalTimeDataList.push(timeData);
-        }
-
-        for (let i = 0; i < 54; i++) {
-            let timeData = new TruckArrivalData(Math.random() * 43200, TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG);
-            this.truckArrivalTimeDataList.push(timeData);
-        }
-
-        for (let i = 0; i < 304; i++) {
-            let timeData = new TruckArrivalData(Math.random() * 43200, TruckArrivalData.TRUCK_KIND_DOKE_PALLET);
-            this.truckArrivalTimeDataList.push(timeData);
-        }
-
-        this.truckArrivalTimeDataList = this.truckArrivalTimeDataList.sort((a, b) => {
+        this.truckArrivalTimeDataList = arrivalTimeDataList.sort((a, b) => {
             return a.time - b.time;
         });
+
+        console.log(this.truckArrivalTimeDataList.length);
     }
 
     /**
