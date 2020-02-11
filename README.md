@@ -42,8 +42,8 @@ Environment 및 기본적인 Unit이 정의되어 있습니다.
     Environment  
     Unit  
     └Facility  
-    └Agent  
      └Road  
+    └Agent  
 구조의 상속관계를 가집니다.
 
 - Environment: 실제 환경을 관리하는 클래스입니다.
