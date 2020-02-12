@@ -309,12 +309,28 @@ class TruckGenerator extends Facility {
     private truckArrivalTimeDataList: Array<TruckArrivalData>;
     private nextTruckIndex: number;
 
+    private dockTruckRatio: number;
+    private bulkTruckRatio: number;
+    private looseBackRatio: number;
+    private palletRatio: number;
+    private seaBulkRatio: number;
+    private tankBulkRatio: number;
+
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'TruckGenerator';
         this.truckArrivalTimeDataList = new Array<TruckArrivalData>();
         this.nextTruckIndex = 0;
+
+        this.dockTruckRatio = 0.8;
+        this.bulkTruckRatio = 0.2;
+        this.looseBackRatio = 0.15;
+        this.palletRatio = 0.85;
+        this.seaBulkRatio = 0.15;
+        this.tankBulkRatio = 0.85;
+
+        this.setTruckArrivalDataList();
     }
 
     /**
@@ -347,63 +363,7 @@ class TruckGenerator extends Facility {
      * @override
      */
     public onStart(): void {
-        let dockTruckRatio = 0.8;
-        let bulkTruckRatio = 0.2;
 
-        let looseBackRatio = 0.15;
-        let palletRatio = 0.85;
-
-        let seaBulkRatio = 0.15;
-        let tankBulkRatio = 0.85;
-        
-        let duration = 12 * 60 * 60;
-        let averageArrivalCount = 591;
-        let averageDelay = duration / averageArrivalCount;
-        let nextDelay = random.exponential(1 / averageDelay);
-
-        let arrivalTimeList = new Array<number>();
-        let arrivalTimeDataList = new Array<TruckArrivalData>();
-
-        for (let time = nextDelay(); time < duration; time += nextDelay()) {
-            arrivalTimeList.push(time);
-        }
-        console.log(arrivalTimeList.length);
-
-        let arrivalTruckCount = arrivalTimeList.length;
-        
-        for (let i = 0; i < Math.round(arrivalTruckCount * dockTruckRatio * looseBackRatio); i++) {
-            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length - 1), 1)[0];
-            
-            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG);
-            arrivalTimeDataList.push(timeData);
-        }
-        
-        for (let i = 0; i < Math.round(arrivalTruckCount * dockTruckRatio * palletRatio); i++) {
-            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
-            
-            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_PALLET);
-            arrivalTimeDataList.push(timeData);
-        }
-        
-        for (let i = 0; i < Math.round(arrivalTruckCount * bulkTruckRatio * tankBulkRatio); i++) {
-            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
-            
-            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_TANK_BULK);
-            arrivalTimeDataList.push(timeData);
-        }
-        
-        for (; arrivalTimeList.length;) {
-            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
-            
-            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_SEA_BULK);
-            arrivalTimeDataList.push(timeData);
-        }
-
-        this.truckArrivalTimeDataList = arrivalTimeDataList.sort((a, b) => {
-            return a.time - b.time;
-        });
-
-        console.log(this.truckArrivalTimeDataList.length);
     }
 
     /**
@@ -434,7 +394,58 @@ class TruckGenerator extends Facility {
                 this.nextTruckIndex++;
             }
         }
+    }
+
+    /**
+     * 트럭 도착 데이터 설정
+     */
+    private setTruckArrivalDataList(): void {
         
+        let duration = 12 * 60 * 60;
+        let averageArrivalCount = 591;
+        let averageDelay = duration / averageArrivalCount;
+        let nextDelay = random.exponential(1 / averageDelay);
+
+        let arrivalTimeList = new Array<number>();
+        let arrivalTimeDataList = new Array<TruckArrivalData>();
+
+        for (let time = nextDelay(); time < duration; time += nextDelay()) {
+            arrivalTimeList.push(time);
+        }
+
+        let arrivalTruckCount = arrivalTimeList.length;
+        
+        for (let i = 0; i < Math.round(arrivalTruckCount * this.dockTruckRatio * this.looseBackRatio); i++) {
+            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length - 1), 1)[0];
+            
+            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG);
+            arrivalTimeDataList.push(timeData);
+        }
+        
+        for (let i = 0; i < Math.round(arrivalTruckCount * this.dockTruckRatio * this.palletRatio); i++) {
+            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
+            
+            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_PALLET);
+            arrivalTimeDataList.push(timeData);
+        }
+        
+        for (let i = 0; i < Math.round(arrivalTruckCount * this.bulkTruckRatio * this.tankBulkRatio); i++) {
+            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
+            
+            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_TANK_BULK);
+            arrivalTimeDataList.push(timeData);
+        }
+        
+        for (; arrivalTimeList.length;) {
+            let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
+            
+            let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_SEA_BULK);
+            arrivalTimeDataList.push(timeData);
+        }
+
+        this.truckArrivalTimeDataList = arrivalTimeDataList.sort((a, b) => {
+            return a.time - b.time;
+        });
     }
 }
 
@@ -548,7 +559,7 @@ class InGateway extends Facility {
         super(environment);
 
         this.name = 'Gateway';
-        this.maxCapacity = 3;
+        this.maxCapacity = 5 * 1.2;
     }
 
     /**
@@ -775,6 +786,7 @@ class BulkProductLoadingPlace extends Facility {
         super(environment);
 
         this.name = 'BulkProductLoadingPlace';
+        this.maxCapacity = 28;
     }
 
     /**
