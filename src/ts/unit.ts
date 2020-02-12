@@ -559,19 +559,19 @@ export class Road extends Facility {
         let standardVehicle = agent.getComponent(Vehicle);
         let standardDistance = standardVehicle.getMovedDistance(this);
 
-        let result = -1;
+        let result = this.getLength(standardVehicle.currentLaneIndex) + standardVehicle.safetyDistance * 1.2;
 
         let list = this.vehicleList[standardVehicle.currentLaneIndex];
 
         for (let i = 0; i < list.length; i ++) {
             let distance = list[i].getMovedDistance(this);
 
-            if ((result == -1 || distance < result) && distance > standardDistance) {
+            if (distance < result && distance > standardDistance) {
                 result = distance;
             }
         }
         
-        return result == -1 ? -1 : (result - standardDistance);
+        return (result - standardDistance);
     }
 
     /**
