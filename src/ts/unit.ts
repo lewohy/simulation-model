@@ -68,6 +68,8 @@ export class Environment {
                     this.unitList.forEach(unit => {
                         if (unit instanceof Agent) {
                             unit.applyComponents();
+                        } else if (unit instanceof Facility) {
+                            unit.handleOutAgentQueue();
                         }
 
                         unit.onUpdate();
@@ -180,6 +182,7 @@ export abstract class Unit {
 export abstract class Facility extends Unit {
     public readonly agentList: Array<Agent>;
     public readonly portList: Array<Facility>;
+    private readonly outAgentQueue: Array<Array<Agent>>;
 
     public maxCapacity: number;
 
@@ -193,6 +196,8 @@ export abstract class Facility extends Unit {
         this.name = 'Facility';
         this.agentList = new Array<Agent>();
         this.portList = new Array<Facility>();
+        this.outAgentQueue = new Array<Array<Agent>>();
+
         this.maxCapacity = 10;
 
         this.transform.scale = new Vector2(20, 20);
@@ -256,6 +261,45 @@ export abstract class Facility extends Unit {
      */
     public canEnter(): boolean {
         return this.agentCount < this.maxCapacity;
+    }
+
+    /**
+     * 나갈 대기열에 있는 Agent 처리
+     */
+    public handleOutAgentQueue(): void {
+        for (let i = 0; i < this.outAgentQueue.length; i++) {
+            if (this.portList[i] && this.outAgentQueue[i] && this.outAgentQueue[i].length > 0) {
+                let agent = this.outAgentQueue[i][0];
+                let vehicle = agent.getComponent(Vehicle);
+
+                if (vehicle && this.portList[i] instanceof Road) {
+                    let road = <Road> this.portList[i];
+
+                    let frontAgentDistance = road.getFrontAgentDistance(vehicle);
+
+                    if (frontAgentDistance > vehicle.safetyDistance) {
+                        this.outAgentQueue[i].splice(0, 1)[0];
+                        this.portList[i].appendAgent(agent);
+                    }
+                } else {
+                    this.outAgentQueue[i].splice(0, 1)[0];
+                    this.portList[i].appendAgent(agent);
+                }
+            }
+        }
+    }
+
+    /**
+     * 나갈 Agent대기열에 추가
+     * @param portIndex 출구 번호
+     * @param agent 
+     */
+    protected addOutAgentQueue(portIndex: number, agent: Agent): void {
+        if (!this.outAgentQueue[portIndex]) {
+            this.outAgentQueue[portIndex] = new Array<Agent>();
+        }
+
+        this.outAgentQueue[portIndex].push(agent);
     }
 }
 
@@ -370,14 +414,14 @@ export class Road extends Facility {
         this.speedLimit = 2.7;
 
         this.transform.scale = new Vector2(Road.LANE_WIDTH, Road.LANE_WIDTH);
+
+        this.refreshVehicleList();
     }
 
     /**
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        this.vehicleList = new Array<Array<Vehicle>>();
-
         if (agent.getComponent(Vehicle)) {
             this.refreshVehicleList();
         }
@@ -387,8 +431,6 @@ export class Road extends Facility {
      * @override
      */
     public onAgentOut(agent: Agent): void {
-        this.vehicleList = new Array<Array<Vehicle>>();
-
         if (agent.getComponent(Vehicle)) {
             this.refreshVehicleList();
         }
@@ -554,14 +596,13 @@ export class Road extends Facility {
      * 해당 agent 바로앞의 agent와의 거리 반환
      * @param vehicle 
      */
-    public getFrontAgentDistance(agent: Agent): number {
+    public getFrontAgentDistance(vehicle: Vehicle): number {
         
-        let standardVehicle = agent.getComponent(Vehicle);
-        let standardDistance = standardVehicle.getMovedDistance(this);
+        let standardDistance = vehicle.getMovedDistance(this);
 
-        let result = this.getLength(standardVehicle.currentLaneIndex) + standardVehicle.safetyDistance * 1.2;
+        let result = this.getLength(vehicle.currentLaneIndex) + vehicle.safetyDistance * 1.2;
 
-        let list = this.vehicleList[standardVehicle.currentLaneIndex];
+        let list = this.vehicleList[vehicle.currentLaneIndex];
 
         for (let i = 0; i < list.length; i ++) {
             let distance = list[i].getMovedDistance(this);
@@ -627,6 +668,8 @@ export class Road extends Facility {
      * 실시간 계산을 하지 않기 위해 캐싱하는 용도
      */
     private refreshVehicleList(): void {
+        this.vehicleList = new Array<Array<Vehicle>>();
+
         for (let i = 0; i < this.laneCount; i++) {
             this.vehicleList[i] = new Array<Vehicle>();
         }
