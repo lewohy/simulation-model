@@ -150,8 +150,7 @@ export class Vehicle extends Component {
         //this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), road.speedLimit);
         
         // 렉 발생 원인인듯
-        
-        this.frontAgentDistance = road.getFrontAgentDistance(agent);
+        this.frontAgentDistance = road.getFrontAgentDistance(this);
 
         this.brakingDistance = this.dynamic.velocity.sqrMagnitude / (2 * this.deceleration);
         
@@ -195,6 +194,9 @@ export class Vehicle extends Component {
 
         if (nextFacility.canEnter()) {
             this._currentWayIndex = 0;
+            this._currentWayProgress = 0;
+            this.brakingDistance = 0;
+            this.dynamic.velocity = Vector2.ZERO;
             nextFacility.appendAgent(agent);
         }
     }
