@@ -308,6 +308,7 @@ export class SimulationModel2 extends Model {
 class TruckGenerator extends Facility {
     private truckArrivalTimeDataList: Array<TruckArrivalData>;
     private nextTruckIndex: number;
+    private arrivalTruckCount: number;
 
     private dockTruckRatio: number;
     private bulkTruckRatio: number;
@@ -322,6 +323,7 @@ class TruckGenerator extends Facility {
         this.name = 'TruckGenerator';
         this.truckArrivalTimeDataList = new Array<TruckArrivalData>();
         this.nextTruckIndex = 0;
+        this.arrivalTruckCount = 0;
 
         this.dockTruckRatio = 0.8;
         this.bulkTruckRatio = 0.2;
@@ -388,7 +390,8 @@ class TruckGenerator extends Facility {
                 }
 
                 truck.register();
-                this.portList[0].appendAgent(truck);
+                this.addOutAgentQueue(0, truck);
+                //this.portList[0].appendAgent(truck);
 
                 nextTruckArrivalTimeData.isArrived = true;
                 this.nextTruckIndex++;
@@ -413,23 +416,23 @@ class TruckGenerator extends Facility {
             arrivalTimeList.push(time);
         }
 
-        let arrivalTruckCount = arrivalTimeList.length;
+        this.arrivalTruckCount = arrivalTimeList.length;
         
-        for (let i = 0; i < Math.round(arrivalTruckCount * this.dockTruckRatio * this.looseBackRatio); i++) {
+        for (let i = 0; i < Math.round(this.arrivalTruckCount * this.dockTruckRatio * this.looseBackRatio); i++) {
             let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length - 1), 1)[0];
             
             let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG);
             arrivalTimeDataList.push(timeData);
         }
         
-        for (let i = 0; i < Math.round(arrivalTruckCount * this.dockTruckRatio * this.palletRatio); i++) {
+        for (let i = 0; i < Math.round(this.arrivalTruckCount * this.dockTruckRatio * this.palletRatio); i++) {
             let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
             
             let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_PALLET);
             arrivalTimeDataList.push(timeData);
         }
         
-        for (let i = 0; i < Math.round(arrivalTruckCount * this.bulkTruckRatio * this.tankBulkRatio); i++) {
+        for (let i = 0; i < Math.round(this.arrivalTruckCount * this.bulkTruckRatio * this.tankBulkRatio); i++) {
             let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
             
             let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_TANK_BULK);
@@ -464,11 +467,9 @@ class TruckDestination extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        let randomDeltaPosition = new Vector2(Math.random() * this.transform.scale.x - this.transform.scale.x / 2, Math.random() * this.transform.scale.y - this.transform.scale.y / 2);
-        //agent.transform.position = Vector2.add(this.transform.position, randomDeltaPosition);
-        //agent.transform.rotation = Math.random() * 2 * Math.PI;
+        agent.transform.position = this.transform.position.clone();
 
-        this.portList[0].appendAgent(agent);
+        this.addOutAgentQueue(0, agent);
     }
 
     /**
@@ -511,13 +512,16 @@ class WaitingPlace extends Facility {
         super(environment);
 
         this.name = 'WaitingPlace';
+        this.maxCapacity = 1000;
     }
 
     /**
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        this.portList[0].appendAgent(agent);
+        agent.transform.position = this.transform.position.clone();
+
+        this.addOutAgentQueue(0, agent);
     }
 
     /**
@@ -559,7 +563,7 @@ class InGateway extends Facility {
         super(environment);
 
         this.name = 'Gateway';
-        this.maxCapacity = 5 * 1.2;
+        this.maxCapacity = 5 * 1.5;
     }
 
     /**
@@ -612,11 +616,11 @@ class InGateway extends Facility {
         yield* Wait.forSeconds(this.environment, 5 * 60);
         
         if (truck instanceof DockTruck) {
-            this.portList[0].appendAgent(truck);
+            this.addOutAgentQueue(0, truck);
         } else if (truck instanceof TankBulkTruck) {
-            this.portList[1].appendAgent(truck);
+            this.addOutAgentQueue(1, truck);
         } else if (truck instanceof SeaBulkTruck) {
-            this.portList[2].appendAgent(truck);
+            this.addOutAgentQueue(2, truck);
         }
     }
 }
@@ -626,13 +630,14 @@ class OutGateway extends Facility {
         super(environment);
 
         this.name = 'Gateway';
+        this.maxCapacity = 1;
     }
 
     /**
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        this.portList[0].appendAgent(agent);
+        this.addOutAgentQueue(0, agent);
     }
 
     /**
@@ -674,6 +679,7 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
         super(environment);
 
         this.name = 'LinerPreparationPlace';
+        this.maxCapacity = 1;
     }
 
     /**
@@ -721,7 +727,7 @@ class SeabulkTruckLinerPreparationPlace extends Facility {
     private *prepareLiner(truck: SeaBulkTruck): any {
         yield* Wait.forSeconds(this.environment, 15 * 60);
 
-        this.portList[0].appendAgent(truck);
+        this.addOutAgentQueue(0, truck);
     }
 }
 
@@ -730,6 +736,7 @@ class WeightMesaurementPlace extends Facility {
         super(environment);
 
         this.name = 'WeightMesaurementPlace';
+        this.maxCapacity = 1;
     }
 
     /**
@@ -777,7 +784,7 @@ class WeightMesaurementPlace extends Facility {
     private *measureWeight(truck: Truck): any {
         yield* Wait.forSeconds(this.environment, 2 * 60);
 
-        this.portList[0].appendAgent(truck);
+        this.addOutAgentQueue(0, truck);
     }
 }
 
@@ -834,7 +841,7 @@ class BulkProductLoadingPlace extends Facility {
     private *loadProduct(truck: SeaBulkTruck): any {
         yield* Wait.forSeconds(this.environment, 50 * 60);
 
-        this.portList[0].appendAgent(truck);
+        this.addOutAgentQueue(0, truck);
     }
 }
 
@@ -843,6 +850,7 @@ class DockProductLoadingPlace extends Facility {
         super(environment);
 
         this.name = 'DockProductLoadingPlace';
+        this.maxCapacity = Math.ceil(34 * 1.5);
     }
 
     /**
@@ -894,7 +902,7 @@ class DockProductLoadingPlace extends Facility {
             yield* Wait.forSeconds(this.environment, 50 * 60);
         }
 
-        this.portList[0].appendAgent(truck);
+        this.addOutAgentQueue(0, truck);
     }
 }
 
