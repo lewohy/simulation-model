@@ -220,7 +220,31 @@ export class Renderer {
      * 격자 활성화
      */
     private enableGrid(): void {
-        // TODO
+        /*
+        let minX = this.cameraPosition.x - this.element.clientWidth * 0.5 / this.zoomSize;
+        let maxX = this.cameraPosition.x + this.element.clientWidth * 0.5 / this.zoomSize;
+        let minY = this.cameraPosition.y - this.element.clientHeight * 0.5 / this.zoomSize;
+        let maxY = this.cameraPosition.y + this.element.clientHeight * 0.5 / this.zoomSize;
+
+
+        let smallGridSize = Math.pow(10, Math.floor(-Math.sqrt(0.2 * (this.zoomSize - 1)) + 2));
+        let largeGridSize = smallGridSize * 10;
+
+        minX = Math.floor(minX - minX % 10);
+        
+        // ???
+        for (let i = 0; i * smallGridSize <= maxX - minX; i++) {
+            let x = minX + i * smallGridSize;
+
+            if (i % 10 === 0) {
+                let path = new Path(new Transform(new Vector2(x, minY), Vector2.ZERO, 0));
+                path.width = 1 / this.zoomSize;
+                path.pointList.push(new Vector2(x, minY));
+                path.pointList.push(new Vector2(x, maxY));
+
+                this.draw(path);
+            }
+        }*/
     }
     
     /**
@@ -233,6 +257,10 @@ export class Renderer {
             if (this.zoomSize <= 0) {
                 this.zoomSize = 1;
             }
+
+            let tmp = 4 / this.zoomSize - 1;
+            //console.log('-----------------');
+            //console.log(this.zoomSize);
         });
 
         this.element.addEventListener('mousemove', e => {
