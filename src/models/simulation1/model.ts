@@ -1,11 +1,11 @@
 import random from 'random';
 
-import { Environment, Facility, Agent, Road } from "../ts/unit";
-import { Renderer } from "../ts/renderer";
-import { Shape, Circle, Font, Quad, Path } from "../ts/drawer";
-import { Vector2, TruckArrivalData, Wait } from "../ts/types";
-import { Dynamics, Vehicle } from '../ts/component';
-import { Model } from '../ts/model';
+import { Environment, Facility, Agent, Road } from "../../ts/unit";
+import { Renderer } from "../../ts/renderer";
+import { Shape, Circle, Font, Quad, Path } from "../../ts/drawer";
+import { Vector2, TruckArrivalData, Wait } from "../../ts/types";
+import { Dynamics, Vehicle } from '../../ts/component';
+import { Model } from '../../ts/model';
 
 export class SimulationModel extends Model {
     private truckGenerator: TruckGenerator;

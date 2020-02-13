@@ -409,6 +409,7 @@ export class Road extends Facility {
         super(environment);
 
         this.name = 'Road';
+        this.maxCapacity = 100;
         this.pointList = new Array<Vector2>();
         this._laneCount = 1;
         this.speedLimit = 2.7;

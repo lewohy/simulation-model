@@ -1,9 +1,9 @@
-import { Model } from "../ts/model";
-import { Road, Facility, Environment, Agent } from "../ts/unit";
-import { Vector2, Wait } from "../ts/types";
-import { Renderer } from "../ts/renderer";
-import { Quad, Font } from "../ts/drawer";
-import { Vehicle } from "../ts/component";
+import { Model } from "../../ts/model";
+import { Road, Facility, Environment, Agent } from "../../ts/unit";
+import { Vector2, Wait } from "../../ts/types";
+import { Renderer } from "../../ts/renderer";
+import { Quad, Font } from "../../ts/drawer";
+import { Vehicle } from "../../ts/component";
 
 export class TestModel extends Model {
 
