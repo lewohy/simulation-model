@@ -32,6 +32,10 @@ export class Vector2 {
         let v1 = Vector2.substract(c, a);
         let v2 = Vector2.substract(b, a);
 
+        if (v1.sqrMagnitude === v2.sqrMagnitude) {
+            return 1;
+        }
+
         return Math.sqrt(v1.sqrMagnitude / v2.sqrMagnitude);
     }
     
