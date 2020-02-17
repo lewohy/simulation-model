@@ -35,7 +35,7 @@ export class Vehicle extends Component {
     public acceleration: number;
     public deceleration: number;
     public safetyDistance: number;
-    public frontAgentDistance: number;
+    public stopDistance: number;
     public brakingDistance: number;
 
     private _currentLaneIndex: number;
@@ -62,10 +62,10 @@ export class Vehicle extends Component {
         super();
 
         this.dynamic = new Dynamics();
-        this.acceleration = 0.1;
-        this.deceleration = 5;
+        this.acceleration = 10;
+        this.deceleration = 20;
         this.safetyDistance = 10;
-        this.frontAgentDistance;
+        this.stopDistance;
         this.brakingDistance = 0;
         this._currentLaneIndex = 0;
         this._currentWayIndex = 0;
@@ -81,36 +81,38 @@ export class Vehicle extends Component {
 
             let roadPointLength = road.getPointLength();
 
-            if (this.currentWayIndex === roadPointLength - 1) {
-                this.onEndOfRoad(agent, road);
-            } else {
-                this.refreshAngle(agent, road);
-                this.refreshVelocity(agent, road);
+            if (roadPointLength > 0) {
 
-                this.dynamic.do(agent);
+                if (this.currentWayIndex === roadPointLength - 1) {
+                    this.onEndOfRoad(agent, road);
+                } else {
+                    this.refreshAngle(agent, road);
+                    this.refreshVelocity(agent, road);
 
-                this._currentWayProgress = Vector2.inverseLerp(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1), agent.transform.position);
+                    this.dynamic.do(agent);
 
-                while (this.currentWayProgress >= 1) {
-                    this._currentWayProgress -= 1;
-                    this._currentWayIndex++;
+                    this._currentWayProgress = Vector2.inverseLerp(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1), agent.transform.position);
 
-                    if (this.currentWayIndex === roadPointLength - 1) {
-                        this._currentWayProgress = 0;
-                        agent.transform.position = road.getPoint(this.currentLaneIndex, road.getPointLength() - 1);
+                    while (this.currentWayProgress >= 1) {
+                        this._currentWayProgress -= 1;
+                        this._currentWayIndex++;
 
-                        return;
-                    }
+                        if (this.currentWayIndex === roadPointLength - 1) {
+                            this._currentWayProgress = 0;
+                            agent.transform.position = road.getPoint(this.currentLaneIndex, road.getPointLength() - 1);
 
-                    this._currentWayProgress = this.currentWayProgress * Vector2.substract(road.getPoint(this.currentLaneIndex, this.currentWayIndex - 1), road.getPoint(this.currentLaneIndex, this.currentWayIndex)).magnitude / Vector2.substract(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1)).magnitude;
+                            return;
+                        }
 
-                    if (this.currentWayProgress < 1) {
-                        this.refreshAngle(agent, road);
-                        //this.refreshVelocity(agent, road);
+                        this._currentWayProgress = this.currentWayProgress * Vector2.substract(road.getPoint(this.currentLaneIndex, this.currentWayIndex - 1), road.getPoint(this.currentLaneIndex, this.currentWayIndex)).magnitude / Vector2.substract(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1)).magnitude;
 
-                        agent.transform.position = Vector2.lerp(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1), this.currentWayProgress);
-                        
-                        break;
+                        if (this.currentWayProgress < 1) {
+                            this.refreshAngle(agent, road);
+
+                            agent.transform.position = Vector2.lerp(road.getPoint(this.currentLaneIndex, this.currentWayIndex), road.getPoint(this.currentLaneIndex, this.currentWayIndex + 1), this.currentWayProgress);
+                            
+                            break;
+                        }
                     }
                 }
             }
@@ -149,14 +151,18 @@ export class Vehicle extends Component {
     private refreshVelocity(agent: Agent, road: Road): void {
         //this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), road.speedLimit);
         
-        // 렉 발생 원인인듯
-        this.frontAgentDistance = road.getFrontAgentDistance(this);
+        // 렉 원인일거임
+        if (road.portList[0] instanceof Road) {
+            this.stopDistance = road.getStopDistanceForVehicle((<Road> road.portList[0]).getEntranceNumber(road), this);
+        } else {
+            this.stopDistance = road.getStopDistanceForVehicle(0, this);
+        }
 
         this.brakingDistance = this.dynamic.velocity.sqrMagnitude / (2 * this.deceleration);
         
         let targetSpeed = 0;
 
-        if (this.frontAgentDistance >= 0 && this.frontAgentDistance < this.brakingDistance + this.safetyDistance) {
+        if (this.stopDistance < this.brakingDistance) {
             targetSpeed = 0;
         } else {
             targetSpeed = road.speedLimit;
@@ -165,20 +171,19 @@ export class Vehicle extends Component {
         let sqrTargetSpeed = targetSpeed * targetSpeed;
 
         if (this.dynamic.velocity.sqrMagnitude < sqrTargetSpeed) {
-            this.dynamic.velocity = Vector2.add(this.dynamic.velocity, Vector2.multiply(agent.transform.forward(), this.acceleration));
+            this.dynamic.velocity = Vector2.add(this.dynamic.velocity, Vector2.multiply(agent.transform.forward(), this.acceleration * agent.environment.deltaTime));
 
             if (this.dynamic.velocity.sqrMagnitude > sqrTargetSpeed) {
                 this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
             }
         } else if (this.dynamic.velocity.sqrMagnitude > sqrTargetSpeed) {
-            let deltaVelocity = Vector2.multiply(agent.transform.forward(), this.deceleration);
+            let deltaVelocity = Vector2.multiply(agent.transform.forward(), this.deceleration * agent.environment.deltaTime);
 
             if (this.dynamic.velocity.sqrMagnitude <= deltaVelocity.sqrMagnitude) {
                 this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
             } else {
                 this.dynamic.velocity = Vector2.substract(this.dynamic.velocity, deltaVelocity);
             }
-            
 
             if (this.dynamic.velocity.sqrMagnitude < sqrTargetSpeed) {
                 this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
@@ -196,7 +201,9 @@ export class Vehicle extends Component {
             this._currentWayIndex = 0;
             this._currentWayProgress = 0;
             this.brakingDistance = 0;
-            this.dynamic.velocity = Vector2.ZERO;
+            if (!(nextFacility instanceof Road)) {
+                this.dynamic.velocity = Vector2.ZERO;
+            }
             nextFacility.appendAgent(agent);
         }
     }

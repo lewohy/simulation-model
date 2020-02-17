@@ -1,7 +1,7 @@
 import { Vector2, Transform } from './types';
 import { Component, Vehicle } from './component';
 import { Renderer } from './renderer';
-import { Path, Quad } from './drawer';
+import { Path, Quad, Circle } from './drawer';
 
 export class Environment {
     public static readonly MAX_TICK = 17;
@@ -275,8 +275,9 @@ export abstract class Facility extends Unit {
                 if (vehicle && this.portList[i] instanceof Road) {
                     let road = <Road> this.portList[i];
 
-                    let frontAgentDistance = road.getFrontAgentDistance(vehicle);
+                    let frontAgentDistance = road.getStopDistanceForVehicle(i, vehicle);
 
+                    // 도로 길이가 짧을때 문제 생길수도 있음.
                     if (frontAgentDistance > vehicle.safetyDistance) {
                         this.outAgentQueue[i].splice(0, 1)[0];
                         this.portList[i].appendAgent(agent);
@@ -388,6 +389,9 @@ export class Road extends Facility {
     private _speedLimit: number;
     private vehicleList: Array<Array<Vehicle>>;
 
+    public readonly entranceList: Array<Road>;
+    public readonly outPortList: Array<Array<Facility>>;
+
     public get laneCount(): number {
         return this._laneCount;
     }
@@ -413,6 +417,8 @@ export class Road extends Facility {
         this.pointList = new Array<Vector2>();
         this._laneCount = 1;
         this.speedLimit = 2.7;
+        this.entranceList = new Array<Road>();
+        this.outPortList = new Array<Array<Facility>>();
 
         this.transform.scale = new Vector2(Road.LANE_WIDTH, Road.LANE_WIDTH);
 
@@ -531,21 +537,33 @@ export class Road extends Facility {
      * @param index 
      */
     public getPoint(lane: number, index: number): Vector2 {
-        return this.lanePointList[lane][index];
+        try {
+            return this.lanePointList[lane][index];
+        } catch (e) {
+            return this.transform.position;
+        }
     }
 
     /**
      * 왼쪽 차선 경계 반환
      */
     public getLeftLaneBoundaryPoint(lane: number, index: number): Vector2 {
-        return this.leftLaneBoundaryPointList[lane][index];
+        try {
+            return this.leftLaneBoundaryPointList[lane][index];
+        } catch (e) {
+            return this.transform.position;
+        }
     }
 
     /**
      * 오른쪽 차선 경계 반환
      */
     public getRightLaneBoundaryPoint(lane: number, index: number): Vector2 {
-        return this.righttLaneBoundaryPointList[lane][index];
+        try {
+            return this.righttLaneBoundaryPointList[lane][index];
+        } catch (e) {
+            return this.transform.position;
+        }
     }
 
     /**
@@ -594,26 +612,93 @@ export class Road extends Facility {
     }
 
     /**
-     * 해당 agent 바로앞의 agent와의 거리 반환
-     * @param vehicle 
+     * @override
      */
-    public getFrontAgentDistance(vehicle: Vehicle): number {
-        
-        let standardDistance = vehicle.getMovedDistance(this);
-
-        let result = this.getLength(vehicle.currentLaneIndex) + vehicle.safetyDistance * 1.2;
-
+    public getStopDistanceForVehicle(entranceNumber: number, vehicle: Vehicle): number {
         let list = this.vehicleList[vehicle.currentLaneIndex];
+        let standardDistance = vehicle.getMovedDistance(this);
+        let result = -1;
 
-        for (let i = 0; i < list.length; i ++) {
+        for (let i = 0; i < list.length; i++) {
             let distance = list[i].getMovedDistance(this);
-
-            if (distance < result && distance > standardDistance) {
+            if ((result === -1 || distance <= result) && distance > standardDistance) {
                 result = distance;
             }
         }
+
+        if (result === -1) {
+            let nextFacility = (this instanceof Intersection) ? this.portList[entranceNumber] : this.portList[0];
+
+            if (nextFacility instanceof Road) {
+                return this.getLength(vehicle.currentLaneIndex) - standardDistance + (<Road> nextFacility).getStopDistanceForStartPoint(entranceNumber, vehicle.currentLaneIndex, vehicle.safetyDistance);
+            } else {
+                return this.getLength(vehicle.currentLaneIndex) - standardDistance;
+            }
+        } else {
+            return result - standardDistance - vehicle.safetyDistance;
+        }
+    }
+    
+    /**
+     * @override
+     */
+    public getStopDistanceForStartPoint(entranceNumber: number, lane: number, safetyDistance: number): number {
+        let list = this.vehicleList[lane];
         
-        return (result - standardDistance);
+        if (list.length === 0) {
+            if (this.portList[entranceNumber] instanceof Road) {
+                return this.getLength(lane) + (<Road> this.portList[entranceNumber]).getStopDistanceForStartPoint(entranceNumber, lane, safetyDistance);
+            } else {
+                return this.getLength(lane);
+            }
+        } else {
+            let result = this.getLength(lane);
+
+            for (let i = 0; i < list.length; i++) {
+                let distance = list[i].getMovedDistance(this);
+
+                if (distance < result) {
+                    result = distance;
+                }
+            }
+
+            return result - safetyDistance;
+        }
+    }
+
+    /**
+     * 입구 번호 반환
+     * @param entrance 
+     */
+    public getEntranceNumber(entrance: Road): number {
+        for (let i = 0; i < this.entranceList.length; i++) {
+            if (this.entranceList[i] === entrance) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * port에 연결될 facility 추가
+     * @param port 
+     * @param facility 
+     */
+    public addOutPort(port: number, facility: Facility): void {
+        if (!this.outPortList[port]) {
+            this.outPortList[port] = new Array<Facility>();
+        }
+
+        this.outPortList[port].push(facility);
+
+        if (this.outPortList[port].length === 1) {
+            this.portList[port] = facility;
+        }
+
+        if (facility instanceof Road) {
+            facility.entranceList.push(this);
+        }
     }
 
     /**
@@ -668,7 +753,7 @@ export class Road extends Facility {
      * 모든 Vehicle를 가진 리스트 재분류
      * 실시간 계산을 하지 않기 위해 캐싱하는 용도
      */
-    private refreshVehicleList(): void {
+    protected refreshVehicleList(): void {
         this.vehicleList = new Array<Array<Vehicle>>();
 
         for (let i = 0; i < this.laneCount; i++) {
@@ -683,4 +768,119 @@ export class Road extends Facility {
             }
         }
     }
+}
+
+
+/**
+ * 교차로
+ */
+export class Intersection extends Road {
+    public controlTower: ControlTower;
+
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'Intersection';
+        this.maxCapacity = 1;
+
+        this.transform.scale = new Vector2(10, 10);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        this.refreshVehicleList();
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        this.refreshVehicleList();
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        let circle = new Circle(this.transform.clone(), 'rgba(0, 0, 0, 0.1)');
+        renderer.draw(circle);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        for (let i = 0; i < this.outPortList.length; i++) {
+            this.portList[i] = this.outPortList[i][this.controlTower.getResponse(this, i)];
+        }
+    }
+}
+
+/**
+ * 교차로용 관제탑
+ */
+export abstract class ControlTower extends Facility {
+    public readonly intersectionList: Array<Intersection>;
+    public readonly referenceFacilityList: Array<Facility>;
+
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'ControlTower';
+        this.maxCapacity = 1;
+        this.transform.scale = new Vector2(10, 10);
+
+        this.intersectionList = new Array<Intersection>();
+        this.referenceFacilityList = new Array<Facility>();
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+
+    /**
+     * 해당 교차로에 대한 결과 반환
+     * @param intersection 
+     */
+    public abstract getResponse(intersection: Intersection, port: number): number;
 }
