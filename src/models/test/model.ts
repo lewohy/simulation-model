@@ -20,43 +20,28 @@ export class TestModel extends Model {
         let truckGenerator = new TruckGenerator(this.environment);
         truckGenerator.transform.position = Vector2.ZERO;
 
-        let testFacility1 = new TestFacility(this.environment);
-        testFacility1.transform.position = new Vector2(100, 0);
-
-        let testFacility2 = new TestFacility(this.environment);
-        testFacility2.transform.position = new Vector2(150, 0);
-
+        
         let destination = new Destination(this.environment);
-        destination.transform.position = new Vector2(250, 0);
+        destination.transform.position = new Vector2(1000, 0);
 
         let r1 = new Road(this.environment);
         r1.addPoint(truckGenerator.getSidePosition(0));
-        r1.addPoint(testFacility1.getSidePosition(Math.PI));
+        r1.addPoint(Vector2.add(truckGenerator.getSidePosition(0), new Vector2(500, 0)));
 
         let r2 = new Road(this.environment);
-        r2.addPoint(testFacility1.getSidePosition(0));
-        r2.addPoint(testFacility2.getSidePosition(Math.PI));
-
-        let r3 = new Road(this.environment);
-        r3.addPoint(testFacility2.getSidePosition(0));
-        r3.addPoint(destination.getSidePosition(Math.PI));
+        r2.addPoint(Vector2.add(truckGenerator.getSidePosition(0), new Vector2(500, 0)));
+        r2.addPoint(destination.getSidePosition(Math.PI));
 
         truckGenerator.portList.push(r1);
-        testFacility1.portList.push(r2);
-        testFacility2.portList.push(r3);
 
-        r1.portList.push(testFacility1);
-        r2.portList.push(testFacility2);
-        r3.portList.push(destination);
+        r1.addOutPort(0, r2);
+        r2.addOutPort(0, destination);
 
         truckGenerator.register();
-        testFacility1.register();
-        testFacility2.register();
         destination.register();
 
         r1.register();
         r2.register();
-        r3.register();
 
     }
 }
@@ -112,13 +97,18 @@ class TruckGenerator extends Facility {
     }
 
     private *test(): any {
+        let truck = new SeaBulkTruck(this.environment);
+        truck.register();
+        
+        this.addOutAgentQueue(0, truck);
+/*
         while (true) {
             yield* Wait.forSeconds(this.environment, 10);
             let truck = new SeaBulkTruck(this.environment);
             truck.register();
             
             this.addOutAgentQueue(0, truck);
-        }
+        }*/
     }
 }
 
@@ -303,7 +293,7 @@ class SeaBulkTruck extends Truck {
         let tmp = this.transform.clone();
         tmp.position.y -= 1.8;
         font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = '앞 차와의 간격: ' + Math.floor(this.vehicle.frontAgentDistance);
+        font.text = '정차해야 할 곳까지 거리: ' + Math.floor(this.vehicle.stopDistance);
         renderer.draw(font);
 
         tmp = this.transform.clone();
