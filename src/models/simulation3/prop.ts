@@ -1,10 +1,15 @@
 import random from 'random';
 
-import { Facility, Environment, Agent, Road } from "../../ts/unit";
+import { Facility, Environment, Agent, Road, Intersection, ControlTower } from "../../ts/unit";
 import { TruckArrivalData, Wait, Vector2 } from "../../ts/types";
 import { Renderer } from "../../ts/renderer";
 import { Circle, Font, Quad } from "../../ts/drawer";
 import { Vehicle } from '../../ts/component';
+
+/**
+ * 디버깅시 각 시설에서 걸리는 시간 비율 조절용
+ */
+const tmp = 0.001;
 
 /**
  * 트럭 도착지로 들어올 트럭들을 생성하는 장소
@@ -69,7 +74,7 @@ export class TruckGenerator extends Facility {
      * @override
      */
     public onStart(): void {
-
+        
     }
 
     /**
@@ -93,8 +98,8 @@ export class TruckGenerator extends Facility {
                     truck = new DockTruck(this.environment, DockTruck.PALLET);
                 }
 
-                //truck.register();
-                //this.addOutAgentQueue(0, truck);
+                truck.register();
+                this.addOutAgentQueue(0, truck);
 
                 nextTruckArrivalTimeData.isArrived = true;
                 this.nextTruckIndex++;
@@ -121,6 +126,7 @@ export class TruckGenerator extends Facility {
 
         this.arrivalTruckCount = arrivalTimeList.length;
         
+        /*
         for (let i = 0; i < Math.round(this.arrivalTruckCount * this.dockTruckRatio * this.looseBackRatio); i++) {
             let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length - 1), 1)[0];
             
@@ -134,7 +140,7 @@ export class TruckGenerator extends Facility {
             let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_PALLET);
             arrivalTimeDataList.push(timeData);
         }
-        
+        */
         for (let i = 0; i < Math.round(this.arrivalTruckCount * this.bulkTruckRatio * this.tankBulkRatio); i++) {
             let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
             
@@ -322,7 +328,7 @@ export class InGateway extends Facility {
      * @param truck 
      */
     private *checkTruck(truck: Truck): any {
-        yield* Wait.forSeconds(this.environment, 5 * 60);
+        yield* Wait.forSeconds(this.environment, 5 * 60 * tmp);
         
         if (truck instanceof DockTruck) {
             this.addOutAgentQueue(0, truck);
@@ -440,7 +446,7 @@ export class SeabulkTruckLinerPreparationPlace extends Facility {
     }
 
     private *prepareLiner(truck: SeaBulkTruck): any {
-        yield* Wait.forSeconds(this.environment, 15 * 60);
+        yield* Wait.forSeconds(this.environment, 15 * 60 * tmp);
 
         this.addOutAgentQueue(0, truck);
     }
@@ -500,7 +506,7 @@ export class WeightMesaurementPlace extends Facility {
     }
 
     private *measureWeight(truck: Truck): any {
-        yield* Wait.forSeconds(this.environment, 2 * 60);
+        yield* Wait.forSeconds(this.environment, 2 * 60 * tmp);
 
         this.addOutAgentQueue(0, truck);
     }
@@ -560,8 +566,9 @@ export class BulkProductLoadingPlace extends Facility {
     }
 
     private *loadProduct(truck: SeaBulkTruck): any {
-        yield* Wait.forSeconds(this.environment, 50 * 60);
+        yield* Wait.forSeconds(this.environment, 50 * 60 * tmp);
 
+        truck.state = Truck.STATE_LOADED;
         this.addOutAgentQueue(0, truck);
     }
 }
@@ -626,6 +633,7 @@ export class DockProductLoadingPlace extends Facility {
             yield* Wait.forSeconds(this.environment, 50 * 60);
         }
 
+        truck.state = Truck.STATE_LOADED;
         this.addOutAgentQueue(0, truck);
     }
 }
@@ -639,7 +647,7 @@ export class ExternalDestination extends Facility {
     public constructor(environment: Environment) {
         super(environment);
 
-        this.name = this.name;
+        this.name = 'ExternalDestination';
         this.arrivedTruckCount = 0;
     }
 
@@ -690,14 +698,139 @@ export class ExternalDestination extends Facility {
     }
 }
 
+
+/**
+ * 교차로
+ */
+export class BulkIntersection extends Intersection {
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'Intersection';
+        this.maxCapacity = 1;
+
+        this.transform.scale = new Vector2(10, 10);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        if (agent instanceof Truck) {
+            let truck = <Truck> agent;
+
+            if (truck.state === Truck.STATE_NONE) {
+                this.addOutAgentQueue(0, truck);
+            } else if (truck.state === Truck.STATE_LOADED) {
+                this.addOutAgentQueue(1, truck);
+            }
+        }
+
+        this.refreshVehicleList();
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        this.refreshVehicleList();
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        let circle = new Circle(this.transform.clone(), 'rgba(0, 0, 0, 0.1)');
+        renderer.draw(circle);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        for (let i = 0; i < this.outPortList.length; i++) {
+            this.portList[i] = this.outPortList[i][this.controlTower.getResponse(this, i)];
+        }
+    }
+}
+
+/**
+ * 벌크 교차로용 관제탑
+ */
+export class BulkIntersectionControlTower extends ControlTower {
+    
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'BulkIntersectionControlTower';
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        let circle = new Circle(this.transform.clone(), 'rgba(0, 0, 0, 0.1)');
+        renderer.draw(circle);
+
+        let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
+        font.text = this.name;
+        renderer.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        
+    }
+    /**
+     * @override
+     */
+    public getResponse(intersection: Intersection, port: number): number {
+        return 0;
+    }
+}
+
 /**
  * 트럭
  */
 export abstract class Truck extends Agent {
     public static readonly WIDTH = 1.85;
     public static readonly LENGTH = 4.3;
+    
+    public static readonly STATE_NONE = 0;
+    public static readonly STATE_LOADED = 1;
 
     public currentRoadIndex: number = 0;
+    public state = 0;
 
     protected vehicle: Vehicle;
 
@@ -759,6 +892,34 @@ export class SeaBulkTruck extends Truck {
         let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
         font.text = '씨벌크 트럭';
         renderer.draw(font);
+
+        font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
+        font.text = '필요 제동 거리: ' + Math.floor(this.vehicle.brakingDistance * 10) / 10;
+        renderer.draw(font);
+
+        let tmp = this.transform.clone();
+        tmp.position.y -= 1.8;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = '정차해야 할 곳까지 거리: ' + Math.floor(this.vehicle.stopDistance);
+        renderer.draw(font);
+
+        tmp = this.transform.clone();
+        tmp.position.y -= 3.6;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = 'Acceleration: ' + this.vehicle.acceleration;
+        renderer.draw(font);
+
+        tmp = this.transform.clone();
+        tmp.position.y -= 5.4;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = 'Deceleration: ' + this.vehicle.deceleration;
+        renderer.draw(font);
+
+        tmp = this.transform.clone();
+        tmp.position.y -= 7.2;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = 'Velocity: ' + Math.floor(this.vehicle.velocity * 10) / 10;
+        renderer.draw(font);
     }
     
     /**
@@ -797,6 +958,34 @@ export class TankBulkTruck extends Truck {
 
         let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
         font.text = '탱크벌크 트럭';
+        renderer.draw(font);
+
+        font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
+        font.text = '필요 제동 거리: ' + Math.floor(this.vehicle.brakingDistance * 10) / 10;
+        renderer.draw(font);
+
+        let tmp = this.transform.clone();
+        tmp.position.y -= 1.8;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = '정차해야 할 곳까지 거리: ' + Math.floor(this.vehicle.stopDistance);
+        renderer.draw(font);
+
+        tmp = this.transform.clone();
+        tmp.position.y -= 3.6;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = 'Acceleration: ' + this.vehicle.acceleration;
+        renderer.draw(font);
+
+        tmp = this.transform.clone();
+        tmp.position.y -= 5.4;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = 'Deceleration: ' + this.vehicle.deceleration;
+        renderer.draw(font);
+
+        tmp = this.transform.clone();
+        tmp.position.y -= 7.2;
+        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
+        font.text = 'Velocity: ' + Math.floor(this.vehicle.velocity * 10) / 10;
         renderer.draw(font);
     }
     
