@@ -2,12 +2,14 @@
   "name": "simulation-model",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./src/main.js",
   "scripts": {
     "webpack --watch": "webpack --watch",
     "webpack": "webpack",
     "tsc build": "tsc -p ./tsconfig.json",
-    "start": "electron ./src/main.js"
+    "start": "electron ./src/main.js",
+    "dist": "electron-builder",
+    "build:win64": "electron-builder --win --x64"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +23,7 @@
     "@types/node": "^12.8.1",
     "css-loader": "^3.4.2",
     "electron": "^7.1.9",
+    "electron-builder": "^22.3.2",
     "mini-css-extract-plugin": "^0.9.0",
     "node-sass": "^4.13.1",
     "sass-loader": "^8.0.2",
@@ -32,5 +35,23 @@
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1"
+  },
+  "build": {
+    "productName": "simulation",
+    "appId": "com.lwh8762.simulation",
+    "asar": true,
+    "protocols": {
+      "name": "simulation",
+      "schemes": [
+        "simulation"
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "output": "build/",
+      "app": "."
+    }
   }
 }
