@@ -4,7 +4,9 @@ import { Shape, Circle, Font, Quad, Path } from "../../ts/drawer";
 import { Vector2, TruckArrivalData, Wait } from "../../ts/types";
 import { Dynamics, Vehicle } from '../../ts/component';
 import { Model } from '../../ts/model';
-import { TruckGenerator, TruckDestination, WaitingPlace, InGateway, SeabulkTruckLinerPreparationPlace, WeightMesaurementPlace, DockProductLoadingPlace, OutGateway, ExternalDestination, BulkProductLoadingPlace, BulkIntersectionControlTower, TankBulkTruck, Truck, BulkIntersection } from './prop';
+import { TruckGenerator, TruckDestination, WaitingPlace, InGateway, SeabulkTruckLinerPreparationPlace, WeightMesaurementPlace, DockProductLoadingPlace, OutGateway, ExternalDestination, BulkProductLoadingPlace, BulkIntersectionControlTower, BulkIntersection, DockIntersectionControlTower, DockIntersection } from './prop';
+
+const MARGIN_RATIO = 1.5;
 
 export class SimulationModel3 extends Model {
     private truckGenerator: TruckGenerator;
@@ -16,7 +18,9 @@ export class SimulationModel3 extends Model {
     private bulkIntersectionControlTower: BulkIntersectionControlTower;
     private bulkProductLoadingPlaceList: Array<BulkProductLoadingPlace>;
     private forBulkIntersectionList: Array<BulkIntersection>;
-    private dockProductLoadingPlace: DockProductLoadingPlace;
+    private dockIntersectionControlTower: DockIntersectionControlTower;
+    private dockProductLoadingPlaceList: Array<DockProductLoadingPlace>;
+    private forDockIntersectionList: Array<DockIntersection>;
     private weightMesaurementPlace2: WeightMesaurementPlace;
     private outGateway: OutGateway;
     private externalDestination: ExternalDestination;
@@ -24,7 +28,7 @@ export class SimulationModel3 extends Model {
     public constructor(element: HTMLCanvasElement) {
         super(element);
 
-        this.environment.timeScale = 50;
+        this.environment.timeScale = 0.01;
 
         this.setup();
     }
@@ -47,6 +51,7 @@ export class SimulationModel3 extends Model {
 
         this.inGateway = new InGateway(this.environment);
         this.inGateway.name = '입구 게이트웨이';
+        this.inGateway.maxCapacity = 5 * MARGIN_RATIO;
         this.inGateway.transform.position = new Vector2(30, 0);
 
         this.linerPreparationPlace = new SeabulkTruckLinerPreparationPlace(this.environment);
@@ -92,22 +97,41 @@ export class SimulationModel3 extends Model {
         this.forBulkIntersectionList = new Array<BulkIntersection>();
 
         this.forBulkIntersectionList[0] = new BulkIntersection(this.environment);
+        this.forBulkIntersectionList[0].name = 'BulkIntersection 0';
         this.forBulkIntersectionList[0].transform.position = Vector2.add(this.bulkProductLoadingPlaceList[0].getSidePosition(0), new Vector2(35, 20));
 
         this.forBulkIntersectionList[1] = new BulkIntersection(this.environment);
+        this.forBulkIntersectionList[1].name = 'BulkIntersection 1';
         this.forBulkIntersectionList[1].transform.position = Vector2.add(this.bulkProductLoadingPlaceList[1].getSidePosition(0), new Vector2(35, 20));
 
         this.forBulkIntersectionList[2] = new BulkIntersection(this.environment);
+        this.forBulkIntersectionList[2].name = 'BulkIntersection 2';
         this.forBulkIntersectionList[2].transform.position = Vector2.add(this.bulkProductLoadingPlaceList[2].getSidePosition(0), new Vector2(35, 20));
 
         this.forBulkIntersectionList[3] = new BulkIntersection(this.environment);
+        this.forBulkIntersectionList[3].name = 'BulkIntersection 3';
         this.forBulkIntersectionList[3].transform.position = Vector2.add(this.bulkProductLoadingPlaceList[3].getSidePosition(0), new Vector2(35, 20));
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        this.dockProductLoadingPlace = new DockProductLoadingPlace(this.environment);
-        this.dockProductLoadingPlace.name = '도크 제품 적재실';
-        this.dockProductLoadingPlace.transform.position = new Vector2(-100, 100);
+        this.dockIntersectionControlTower = new DockIntersectionControlTower(this.environment);
+        this.dockIntersectionControlTower.name = '도크 교차로 관제탑';
+        this.dockIntersectionControlTower.transform.position = new Vector2(-10, 20);
+        
+        //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        this.dockProductLoadingPlaceList = new Array<DockProductLoadingPlace>();
+
+        for (let i = 0; i < 34 * MARGIN_RATIO; i++) {
+            let dplp = new DockProductLoadingPlace(this.environment);
+            dplp.name = i.toString();
+            dplp.transform.scale = new Vector2(7, 3);
+            dplp.transform.position = new Vector2(150 - 6 * i, 100);
+
+            this.dockProductLoadingPlaceList.push(dplp);
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////
 
         this.weightMesaurementPlace2 = new WeightMesaurementPlace(this.environment);
         this.weightMesaurementPlace2.name = '무게 측정실 2';
@@ -207,37 +231,97 @@ export class SimulationModel3 extends Model {
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        let ig2dpp = new Road(this.environment);
-        {
-            let startPoint = Vector2.substract(this.inGateway.getSidePosition(Math.PI / 2), new Vector2(Road.LANE_WIDTH * 1.5, 0));
-            let endPoint = this.dockProductLoadingPlace.getSidePosition(0);
-
-            ig2dpp.addPoint(startPoint);
-
-            ig2dpp.addPoint(new Vector2(startPoint.x, endPoint.y - 10));
-            ig2dpp.addPoint(new Vector2(startPoint.x - 10, endPoint.y));
+        let forDockRoad = new Array<Road>();
+        this.forDockIntersectionList = new Array<DockIntersection>();
+        
+        for (let i = 0; i < this.dockProductLoadingPlaceList.length; i++) {
+            let facility = this.dockProductLoadingPlaceList[i];
             
-            ig2dpp.addPoint(endPoint);
+            this.dockIntersectionControlTower.referenceFacilityList.push(facility);
+
+            let entrancePoint = facility.getSidePosition(-Math.PI / 2);
+            
+            let road = new Road(this.environment);
+            
+            road.addPoint(Vector2.add(entrancePoint, new Vector2(3, -10)));
+            road.addPoint(Vector2.add(entrancePoint, new Vector2(-3, -10)));
+
+            forDockRoad.push(road);
+            
+            this.dockIntersectionControlTower.referenceFacilityList.push(road);
+
+            road = new Road(this.environment);
+
+            road.addPoint(Vector2.add(entrancePoint, new Vector2(3, -10)));
+            road.addPoint(Vector2.add(entrancePoint, new Vector2(0, -1)));
+            road.addPoint(Vector2.add(entrancePoint, new Vector2(0, 0)));
+
+            forDockRoad.push(road);
+
+            this.dockIntersectionControlTower.referenceFacilityList.push(road);
+            
+            road = new Road(this.environment);
+            
+            road.addPoint(Vector2.add(entrancePoint, new Vector2(0, 0)));
+            road.addPoint(Vector2.add(entrancePoint, new Vector2(0, -1)));
+            road.addPoint(Vector2.add(entrancePoint, new Vector2(-3, -10)));
+
+            forDockRoad.push(road);
+            
+            this.dockIntersectionControlTower.referenceFacilityList.push(road);
+
+            let intersection = new DockIntersection(this.environment);
+            intersection.controlTower = this.dockIntersectionControlTower;
+            intersection.transform.scale = new Vector2(2, 2);
+            intersection.transform.position = Vector2.add(entrancePoint, new Vector2(3, -10));
+            this.dockIntersectionControlTower.intersectionList.push(intersection);
+            this.forDockIntersectionList.push(intersection);
         }
+        
+        let intersection = new DockIntersection(this.environment);
+        intersection.transform.scale = new Vector2(2, 2);
+        intersection.controlTower = this.dockIntersectionControlTower;
+        intersection.transform.position = Vector2.add(this.dockProductLoadingPlaceList[this.dockProductLoadingPlaceList.length - 1].getSidePosition(-Math.PI / 2), new Vector2(-3, -10));
+        this.dockIntersectionControlTower.intersectionList.push(intersection);
+        this.forDockIntersectionList.push(intersection);
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////
 
+        let ig2dpp = new Road(this.environment);
+        {
+            let startPoint = Vector2.substract(this.inGateway.getSidePosition(Math.PI / 2), new Vector2(Road.LANE_WIDTH * 1.5, 0));
+            let endPoint = this.forDockIntersectionList[0].transform.position;
+
+            ig2dpp.addPoint(startPoint);
+            
+            ig2dpp.addPoint(new Vector2(startPoint.x, startPoint.y + 50 + Road.LANE_WIDTH * 1.5 - 10));
+            ig2dpp.addPoint(new Vector2(startPoint.x + 10, startPoint.y + 50 + Road.LANE_WIDTH * 1.5));
+            
+            ig2dpp.addPoint(new Vector2(endPoint.x + 10, startPoint.y + 50 + Road.LANE_WIDTH * 1.5));
+            ig2dpp.addPoint(new Vector2(endPoint.x + 15, startPoint.y + 50 + Road.LANE_WIDTH * 1.5 + 5));
+
+            ig2dpp.addPoint(new Vector2(endPoint.x + 15, endPoint.y - 5));
+            ig2dpp.addPoint(new Vector2(endPoint.x + 10, endPoint.y));
+
+            ig2dpp.addPoint(endPoint);
+        }
+
         let dpp2og = new Road(this.environment);
         {
-            let startPoint = this.dockProductLoadingPlace.getSidePosition(Math.PI);
+            let startPoint = intersection.transform.position;
             let endPoint = Vector2.add(this.outGateway.getSidePosition(Math.PI / 2), new Vector2(Road.LANE_WIDTH * 0.75, 0));
 
             dpp2og.addPoint(startPoint);
-
-            dpp2og.addPoint(new Vector2(startPoint.x - 20 + 10, startPoint.y));
-            dpp2og.addPoint(new Vector2(startPoint.x - 20, startPoint.y - 10));
-
-            dpp2og.addPoint(new Vector2(startPoint.x - 20, endPoint.y + 50 + Road.LANE_WIDTH * 1.5 + 10));
-            dpp2og.addPoint(new Vector2(startPoint.x - 20 + 10, endPoint.y + 50 + Road.LANE_WIDTH * 1.5));
-
+            
+            dpp2og.addPoint(new Vector2(startPoint.x - 10, startPoint.y));
+            dpp2og.addPoint(new Vector2(startPoint.x - 15, startPoint.y - 5));
+            
+            dpp2og.addPoint(new Vector2(startPoint.x - 15, endPoint.y + 50 + Road.LANE_WIDTH * 1.5 + 5));
+            dpp2og.addPoint(new Vector2(startPoint.x - 10, endPoint.y + 50 + Road.LANE_WIDTH * 1.5));
+            
             dpp2og.addPoint(new Vector2(endPoint.x - 10, endPoint.y + 50 + Road.LANE_WIDTH * 1.5));
             dpp2og.addPoint(new Vector2(endPoint.x, endPoint.y + 50 + Road.LANE_WIDTH * 1.5 - 10));
-
+            
             dpp2og.addPoint(endPoint);
         }
 
@@ -498,8 +582,12 @@ export class SimulationModel3 extends Model {
         this.bulkProductLoadingPlaceList[2].portList.push(bpp22wmp2p);
         this.bulkProductLoadingPlaceList[3].portList.push(bpp32wmp2);
 
+        for (let i = 0; i < this.dockProductLoadingPlaceList.length; i++) {
+            this.dockProductLoadingPlaceList[i].portList.push(forDockRoad[i * 3 + 2]);
+        }
+
         this.forBulkIntersectionList[0].addOutPort(0, bpp0p2bpp0);
-        this.forBulkIntersectionList[0].addOutPort(1, bpp0p2bpp1p);
+        this.forBulkIntersectionList[0].addOutPort(0, bpp0p2bpp1p);
 
         this.forBulkIntersectionList[1].addOutPort(0, bpp1p2bpp1);
         this.forBulkIntersectionList[1].addOutPort(0, bpp1p2bpp2p);
@@ -512,8 +600,27 @@ export class SimulationModel3 extends Model {
         this.forBulkIntersectionList[3].addOutPort(0, bpp3p2bpp3);
         this.forBulkIntersectionList[3].addOutPort(0, bpp32wmp2);
         this.forBulkIntersectionList[3].addOutPort(1, bpp22wmp2);
+
+        for (let i = 0; i < this.dockProductLoadingPlaceList.length; i++) {
+            let facility = this.dockProductLoadingPlaceList[i];
+            let intersection = this.forDockIntersectionList[i];
+
+            facility.portList.push(forDockRoad[i * 3 + 2]);
+            
+            forDockRoad[i * 3].addOutPort(0, this.forDockIntersectionList[i + 1]);
+            forDockRoad[i * 3 + 1].addOutPort(0, facility);
+
+            intersection.addOutPort(0, forDockRoad[i * 3 + 1]);
+            intersection.addOutPort(0, forDockRoad[i * 3]);
+
+            intersection.addOutPort(1, forDockRoad[i * 3]);
+            
+            forDockRoad[i * 3 + 2].addOutPort(0, this.forDockIntersectionList[i + 1]);
+        }
+
+        this.forDockIntersectionList[this.forDockIntersectionList.length - 1].addOutPort(0, dpp2og);
+        this.forDockIntersectionList[this.forDockIntersectionList.length - 1].addOutPort(1, dpp2og);
         
-        this.dockProductLoadingPlace.portList.push(dpp2og);
         this.weightMesaurementPlace2.portList.push(wmp22og);
         this.outGateway.portList.push(og2ed);
 
@@ -532,7 +639,27 @@ export class SimulationModel3 extends Model {
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        this.bulkIntersectionControlTower.referenceFacilityList
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp0p2bpp0);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp0p2bpp1p);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(this.bulkProductLoadingPlaceList[0]);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp02wmp2p);
+
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp1p2bpp1);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp1p2bpp2p);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(this.bulkProductLoadingPlaceList[1]);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp12wmp2p);
+
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp2p2bpp2);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp2p2bpp3p);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(this.bulkProductLoadingPlaceList[2]);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp22wmp2p);
+
+        this.bulkIntersectionControlTower.referenceFacilityList.push(bpp3p2bpp3);
+        this.bulkIntersectionControlTower.referenceFacilityList.push(this.bulkProductLoadingPlaceList[3]);
+        
+        this.forBulkIntersectionList.forEach(e => {
+            this.bulkIntersectionControlTower.intersectionList.push(e);
+        });
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -549,7 +676,13 @@ export class SimulationModel3 extends Model {
         this.forBulkIntersectionList.forEach(e => {
             e.register();
         });
-        this.dockProductLoadingPlace.register();
+        this.dockProductLoadingPlaceList.forEach(e => {
+            e.register();
+        });
+        this.forDockIntersectionList.forEach(e => {
+            e.register();
+        });
+        this.dockIntersectionControlTower.register();
         this.weightMesaurementPlace2.register();
         this.outGateway.register();
         this.externalDestination.register();
@@ -561,7 +694,7 @@ export class SimulationModel3 extends Model {
         wp2ig.addOutPort(0, this.inGateway);
         ig2wmp1.addOutPort(0, this.weightMesaurementPlace1);
         ig2lpp.addOutPort(0, this.linerPreparationPlace);
-        ig2dpp.addOutPort(0, this.dockProductLoadingPlace);
+        ig2dpp.addOutPort(0, this.forDockIntersectionList[0]);
         dpp2og.addOutPort(0, this.outGateway);
         lpp2wmp1.addOutPort(0, this.weightMesaurementPlace1);
 
@@ -584,6 +717,11 @@ export class SimulationModel3 extends Model {
         bpp3p2bpp3.addOutPort(0, this.bulkProductLoadingPlaceList[3]);
         bpp32wmp2.addOutPort(0, this.weightMesaurementPlace2);
 
+        for (let i = 0; i < this.forDockIntersectionList.length; i++) {
+            let intersection = this.forDockIntersectionList[i];
+            
+        }
+
         wmp22og.addOutPort(0, this.outGateway);
         og2ed.addOutPort(0, this.externalDestination);
 
@@ -596,6 +734,9 @@ export class SimulationModel3 extends Model {
         ig2lpp.register();
         ig2dpp.register();
         dpp2og.register();
+        forDockRoad.forEach(e => {
+            e.register();
+        });
         lpp2wmp1.register();
 
         wmp12bpp0p.register();

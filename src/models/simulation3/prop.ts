@@ -126,7 +126,6 @@ export class TruckGenerator extends Facility {
 
         this.arrivalTruckCount = arrivalTimeList.length;
         
-        /*
         for (let i = 0; i < Math.round(this.arrivalTruckCount * this.dockTruckRatio * this.looseBackRatio); i++) {
             let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length - 1), 1)[0];
             
@@ -140,7 +139,7 @@ export class TruckGenerator extends Facility {
             let timeData = new TruckArrivalData(time, TruckArrivalData.TRUCK_KIND_DOKE_PALLET);
             arrivalTimeDataList.push(timeData);
         }
-        */
+        
         for (let i = 0; i < Math.round(this.arrivalTruckCount * this.bulkTruckRatio * this.tankBulkRatio); i++) {
             let time = arrivalTimeList.splice(Math.floor(Math.random() * arrivalTimeList.length), 1)[0];
             
@@ -278,7 +277,6 @@ export class InGateway extends Facility {
         super(environment);
 
         this.name = 'Gateway';
-        this.maxCapacity = 5 * 1.5;
     }
 
     /**
@@ -566,7 +564,7 @@ export class BulkProductLoadingPlace extends Facility {
     }
 
     private *loadProduct(truck: SeaBulkTruck): any {
-        yield* Wait.forSeconds(this.environment, 50 * 60 * tmp);
+        yield* Wait.forSeconds(this.environment, 50 * 60 /* tmp*/);
 
         truck.state = Truck.STATE_LOADED;
         this.addOutAgentQueue(0, truck);
@@ -581,7 +579,7 @@ export class DockProductLoadingPlace extends Facility {
         super(environment);
 
         this.name = 'DockProductLoadingPlace';
-        this.maxCapacity = Math.ceil(34 * 1.5);
+        this.maxCapacity = 1;
     }
 
     /**
@@ -703,11 +701,14 @@ export class ExternalDestination extends Facility {
  * 교차로
  */
 export class BulkIntersection extends Intersection {
+    public message: string;
+
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'Intersection';
         this.maxCapacity = 1;
+        this.message = '0';
 
         this.transform.scale = new Vector2(10, 10);
     }
@@ -742,6 +743,10 @@ export class BulkIntersection extends Intersection {
     public render(renderer: Renderer): void {
         let circle = new Circle(this.transform.clone(), 'rgba(0, 0, 0, 0.1)');
         renderer.draw(circle);
+
+        let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
+        font.text = '' + this.message;
+        renderer.draw(font);
     }
 
     /**
@@ -765,11 +770,13 @@ export class BulkIntersection extends Intersection {
  * 벌크 교차로용 관제탑
  */
 export class BulkIntersectionControlTower extends ControlTower {
-    
+    private truckCountList: Array<number>;
+
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'BulkIntersectionControlTower';
+        this.truckCountList = new Array<number>();
     }
 
     /**
@@ -809,12 +816,234 @@ export class BulkIntersectionControlTower extends ControlTower {
      * @override
      */
     public onUpdate(): void {
+        if (this.referenceFacilityList[1].agentCount > 0) {
+            (<Road> this.referenceFacilityList[3]).speedLimit = 0;
+        } else {
+            (<Road> this.referenceFacilityList[3]).speedLimit = Road.DEFAULT_SPEED;
+        }
         
+        if (this.referenceFacilityList[5].agentCount > 0) {
+            (<Road> this.referenceFacilityList[7]).speedLimit = 0;
+        } else {
+            (<Road> this.referenceFacilityList[7]).speedLimit = Road.DEFAULT_SPEED;
+        }
+        
+        if (this.referenceFacilityList[9].agentCount > 0) {
+            (<Road> this.referenceFacilityList[11]).speedLimit = 0;
+        } else {
+            (<Road> this.referenceFacilityList[11]).speedLimit = Road.DEFAULT_SPEED;
+        }
+
+        this.truckCountList[0] = this.referenceFacilityList[2].agentCount - this.referenceFacilityList[2].maxCapacity;
+        this.truckCountList[1] = this.referenceFacilityList[6].agentCount - this.referenceFacilityList[6].maxCapacity;
+        this.truckCountList[2] = this.referenceFacilityList[10].agentCount - this.referenceFacilityList[10].maxCapacity;
+        this.truckCountList[3] = this.referenceFacilityList[13].agentCount - this.referenceFacilityList[13].maxCapacity;
+        
+        this.truckCountList[0] += this.referenceFacilityList[0].agentCount / 4;
+        this.truckCountList[1] += this.referenceFacilityList[4].agentCount / 4 + this.referenceFacilityList[1].agentCount / 3;
+        this.truckCountList[2] += this.referenceFacilityList[8].agentCount / 4 + this.referenceFacilityList[1].agentCount / 3 + this.referenceFacilityList[5].agentCount / 2;
+        this.truckCountList[3] += this.referenceFacilityList[12].agentCount / 4 + this.referenceFacilityList[1].agentCount / 3 + this.referenceFacilityList[5].agentCount / 2 + this.referenceFacilityList[9].agentCount;
+
     }
+
     /**
      * @override
      */
-    public getResponse(intersection: Intersection, port: number): number {
+    public getResponse(intersection: BulkIntersection, port: number): number {
+        let intersectionNumber = this.getIntersectionNumber(intersection);
+
+        if (port === 0) {
+            intersection.message = '' + this.truckCountList[intersectionNumber];
+
+            if (intersectionNumber === 3) {
+                return 0;
+            } else {
+                let result = intersectionNumber;
+
+                for (let i = result; i < this.truckCountList.length; i++) {
+
+                    if (this.truckCountList[i] < this.truckCountList[intersectionNumber]) {
+                        result = i;
+                    }
+                }
+
+                return result === intersectionNumber ? 0 : 1;
+            }
+        }
+
+
+        return 0;
+    }
+}
+
+
+/**
+ * 교차로
+ */
+export class DockIntersection extends Intersection {
+    public message: string;
+
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'Intersection';
+        this.maxCapacity = 1;
+        this.message = '0';
+
+        this.transform.scale = new Vector2(10, 10);
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        if (agent instanceof Truck) {
+            let truck = <Truck> agent;
+
+            if (truck.state === Truck.STATE_NONE) {
+                this.addOutAgentQueue(0, truck);
+            } else if (truck.state === Truck.STATE_LOADED) {
+                this.addOutAgentQueue(1, truck);
+            }
+        }
+
+        this.refreshVehicleList();
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        this.refreshVehicleList();
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        let circle = new Circle(this.transform.clone(), 'rgba(0, 0, 0, 0.1)');
+        renderer.draw(circle);
+
+        let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
+        font.text = this.message;
+        renderer.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        for (let i = 0; i < this.outPortList.length; i++) {
+            //this.portList[i] = this.outPortList[i][1];
+            this.portList[i] = this.outPortList[i][this.controlTower.getResponse(this, i)];
+        }
+    }
+}
+
+
+/**
+ * 도크 교차로용 관제탑
+ */
+export class DockIntersectionControlTower extends ControlTower {
+    private truckCountList: Array<number>;
+    
+    public constructor(environment: Environment) {
+        super(environment);
+
+        this.name = 'DockIntersectionControlTower';
+        this.truckCountList = new Array<number>();
+    }
+
+    /**
+     * @override
+     */
+    public onAgentIn(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onAgentOut(agent: Agent): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public render(renderer: Renderer): void {
+        let circle = new Circle(this.transform.clone(), 'rgba(0, 0, 0, 0.1)');
+        renderer.draw(circle);
+
+        let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
+        font.text = this.name;
+        renderer.draw(font);
+    }
+
+    /**
+     * @override
+     */
+    public onStart(): void {
+        
+    }
+
+    /**
+     * @override
+     */
+    public onUpdate(): void {
+        for (let i = 0; i < this.intersectionList.length - 1; i++) {
+            if (this.referenceFacilityList[i * 4 + 3].agentCount > 0) {
+                (<Road> this.referenceFacilityList[i * 4 + 1]).speedLimit = 0;
+            } else {
+                (<Road> this.referenceFacilityList[i * 4 + 1]).speedLimit = Road.DEFAULT_SPEED;
+            }
+        }
+
+        for (let i = 0; i < this.intersectionList.length - 1; i++) {
+            this.truckCountList[i] = this.referenceFacilityList[i * 4].agentCount - this.referenceFacilityList[i * 4].maxCapacity;
+        }
+
+        for (let i = 0; i < this.intersectionList.length - 1; i++) {
+            for (let j = i; j < this.intersectionList.length - 1; j++) {
+                this.truckCountList[j] += this.referenceFacilityList[i * 4 + 1].agentCount / (this.intersectionList.length - j);
+            }
+        }
+    }
+
+    /**
+     * @override
+     */
+    public getResponse(intersection: BulkIntersection, port: number): number {
+        let intersectionNumber = this.getIntersectionNumber(intersection);
+
+        if (port === 0) {
+            //intersection.priority = this.truckCountList[intersectionNumber];
+
+            if (intersectionNumber === this.intersectionList.length - 1) {
+                return 0;
+            } else {
+                let result = intersectionNumber;
+
+                for (let i = result; i < this.truckCountList.length; i++) {
+
+                    if (this.truckCountList[i] < this.truckCountList[intersectionNumber]) {
+                        result = i;
+                    }
+                }
+                let tmp = result === intersectionNumber ? 0 : 1;
+                intersection.message = '' + result + '|' + intersectionNumber + '|' + tmp;
+                
+                return tmp;
+            }
+        }
+
         return 0;
     }
 }
@@ -833,6 +1062,10 @@ export abstract class Truck extends Agent {
     public state = 0;
 
     protected vehicle: Vehicle;
+
+    public get velocity(): number {
+        return this.vehicle.velocity;
+    }
 
     public constructor(environment: Environment) {
         super(environment);
@@ -892,34 +1125,6 @@ export class SeaBulkTruck extends Truck {
         let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
         font.text = '씨벌크 트럭';
         renderer.draw(font);
-
-        font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
-        font.text = '필요 제동 거리: ' + Math.floor(this.vehicle.brakingDistance * 10) / 10;
-        renderer.draw(font);
-
-        let tmp = this.transform.clone();
-        tmp.position.y -= 1.8;
-        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = '정차해야 할 곳까지 거리: ' + Math.floor(this.vehicle.stopDistance);
-        renderer.draw(font);
-
-        tmp = this.transform.clone();
-        tmp.position.y -= 3.6;
-        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = 'Acceleration: ' + this.vehicle.acceleration;
-        renderer.draw(font);
-
-        tmp = this.transform.clone();
-        tmp.position.y -= 5.4;
-        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = 'Deceleration: ' + this.vehicle.deceleration;
-        renderer.draw(font);
-
-        tmp = this.transform.clone();
-        tmp.position.y -= 7.2;
-        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = 'Velocity: ' + Math.floor(this.vehicle.velocity * 10) / 10;
-        renderer.draw(font);
     }
     
     /**
@@ -958,34 +1163,6 @@ export class TankBulkTruck extends Truck {
 
         let font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
         font.text = '탱크벌크 트럭';
-        renderer.draw(font);
-
-        font = new Font(this.transform.clone(), 'rgba(0, 0, 0, 1)');
-        font.text = '필요 제동 거리: ' + Math.floor(this.vehicle.brakingDistance * 10) / 10;
-        renderer.draw(font);
-
-        let tmp = this.transform.clone();
-        tmp.position.y -= 1.8;
-        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = '정차해야 할 곳까지 거리: ' + Math.floor(this.vehicle.stopDistance);
-        renderer.draw(font);
-
-        tmp = this.transform.clone();
-        tmp.position.y -= 3.6;
-        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = 'Acceleration: ' + this.vehicle.acceleration;
-        renderer.draw(font);
-
-        tmp = this.transform.clone();
-        tmp.position.y -= 5.4;
-        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = 'Deceleration: ' + this.vehicle.deceleration;
-        renderer.draw(font);
-
-        tmp = this.transform.clone();
-        tmp.position.y -= 7.2;
-        font = new Font(tmp, 'rgba(0, 0, 0, 1)');
-        font.text = 'Velocity: ' + Math.floor(this.vehicle.velocity * 10) / 10;
         renderer.draw(font);
     }
     
