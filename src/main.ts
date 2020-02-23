@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 
-let win = null;
+let win: BrowserWindow = null;
 
 function createWindow () {
     win = new BrowserWindow({
@@ -11,7 +11,7 @@ function createWindow () {
         }
     });
 
-    win.loadFile('./pages/index.html');
+    win.loadURL('file://' + __dirname +'/pages/index.html');
 
     win.webContents.openDevTools();
 
