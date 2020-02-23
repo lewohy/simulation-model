@@ -63,7 +63,7 @@ export class Vehicle extends Component {
 
         this.dynamic = new Dynamics();
         this.acceleration = 10;
-        this.deceleration = 20;
+        this.deceleration = 50;
         this.safetyDistance = 10;
         this.stopDistance;
         this.brakingDistance = 0;
