@@ -239,7 +239,7 @@ export abstract class Facility extends Unit {
      * @param directrion 0: right, pi: left
      */
     public getSidePosition(angle: number): Vector2 {
-        let vector = Vector2.add(this.transform.position, new Vector2(this.transform.scale.x / 2 * Math.cos(angle), this.transform.scale.y / 2 * Math.sin(angle)));
+        let vector = Vector2.add(this.transform.position, new Vector2(this.transform.scale.y / 2 * Math.cos(angle), this.transform.scale.x / 2 * Math.sin(angle)));
 
         return vector;
     }
@@ -269,16 +269,17 @@ export abstract class Facility extends Unit {
     public handleOutAgentQueue(): void {
         for (let i = 0; i < this.outAgentQueue.length; i++) {
             if (this.portList[i] && this.outAgentQueue[i] && this.outAgentQueue[i].length > 0) {
+
                 let agent = this.outAgentQueue[i][0];
                 let vehicle = agent.getComponent(Vehicle);
 
                 if (vehicle && this.portList[i] instanceof Road) {
                     let road = <Road> this.portList[i];
 
-                    let frontAgentDistance = road.getStopDistanceForVehicle(i, vehicle);
+                    let frontAgentDistance = road.getStopDistanceForStartPoint(i, vehicle.currentLaneIndex, vehicle.safetyDistance);
 
-                    // 도로 길이가 짧을때 문제 생길수도 있음.
-                    if (frontAgentDistance > vehicle.safetyDistance) {
+                    // || road.agentCount === 0 조건 추가하기
+                    if (frontAgentDistance > 0) {
                         this.outAgentQueue[i].splice(0, 1)[0];
                         this.portList[i].appendAgent(agent);
                     }
@@ -379,6 +380,7 @@ export abstract class Agent extends Unit {
  * 길
  */
 export class Road extends Facility {
+    public static readonly DEFAULT_SPEED = 16.7;
     public static readonly LANE_WIDTH = 2;
 
     private readonly pointList: Array<Vector2>;
@@ -416,7 +418,7 @@ export class Road extends Facility {
         this.maxCapacity = 100;
         this.pointList = new Array<Vector2>();
         this._laneCount = 1;
-        this.speedLimit = 2.7;
+        this.speedLimit = Road.DEFAULT_SPEED;
         this.entranceList = new Array<Road>();
         this.outPortList = new Array<Array<Facility>>();
 
@@ -447,7 +449,6 @@ export class Road extends Facility {
      * @override
      */
     public render(renderer: Renderer): void {
-
         if (this.pointList.length > 0) {
             for (let i = 0; i < this.laneCount; i++) {
 
@@ -883,4 +884,18 @@ export abstract class ControlTower extends Facility {
      * @param intersection 
      */
     public abstract getResponse(intersection: Intersection, port: number): number;
+    
+    /**
+     * 교차로 번호 반환
+     * @param intersection 
+     */
+    protected getIntersectionNumber(intersection: Intersection): number {
+        for (let i = 0; i < this.intersectionList.length; i++) {
+            if (this.intersectionList[i] === intersection) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 }
