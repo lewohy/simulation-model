@@ -271,8 +271,12 @@ export class Renderer {
 
         this.element.addEventListener('mousedown', e => {
             if (e.button === 0) {
-                for (let i = 0; i < this.environment.unitList.length; i++) {
-                    let unit = this.environment.unitList[i];
+                let sortedList = this.environment.unitList.sort((a, b) => {
+                    return a.transform.scale.sqrMagnitude - b.transform.scale.sqrMagnitude;
+                });
+
+                for (let i = 0; i < sortedList.length; i++) {
+                    let unit = sortedList[i];
                     let convertedPosition = this.getRealPixelPosition(unit.transform.position);
                     let convertedScale = this.convertMeterToPixel(unit.transform.scale);
 
