@@ -43,6 +43,8 @@ Environment 및 기본적인 Unit이 정의되어 있습니다.
     Unit  
     └Facility  
      └Road  
+      └Intersection
+     └ControlTower
     └Agent  
 구조의 상속관계를 가집니다.
 
@@ -50,6 +52,9 @@ Environment 및 기본적인 Unit이 정의되어 있습니다.
 - Unit: Environment에 들어가는 모든 오브젝트의 부모클래스입니다.
 - Facility: 기본적으로 움직이지 않고 Agent가 드나들 수 있는 Unit입니다. 이 Unit에는 Component 추가가 불가능합니다.
 - Agent: 움직일수 있고 Facility에 드나들 수 있는 Unit입니다. 이 Unit에는 Component 추가가 가능합니다.
+- Road: 차량이 다니는 길 입니다.
+- Intersection: 차량이 다니는 길 중 교차로입니다. ControlTower의 통제를 받습니다.
+- ControlTower: 교차로를 통제하는 관제탑입니다. 내부 로직을 구현하여 교차로를 통제합니다.
     
 ### util.ts
 유용한 기능들을 한곳에 모아두기 위해 만든 파일입니다.
