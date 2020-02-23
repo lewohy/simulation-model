@@ -10,7 +10,7 @@ function createWindow() {
             nodeIntegration: true
         }
     });
-    win.loadFile('./pages/index.html');
+    win.loadURL('file://' + __dirname + '/pages/index.html');
     win.webContents.openDevTools();
     win.on('closed', function () {
         win = null;
