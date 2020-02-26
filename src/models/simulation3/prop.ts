@@ -7,6 +7,11 @@ import { Circle, Font, Quad } from "../../ts/drawer";
 import { Vehicle } from '../../ts/component';
 
 /**
+ * 트럭 생성기에 여러 정보가 담겨있어서 다른 클래서에서도 접근 가능하도록 하기 위함.
+ */
+let truckGenerator: TruckGenerator;
+
+/**
  * 디버깅시 각 시설에서 걸리는 시간 비율 조절용
  */
 const tmp = 0.001;
@@ -15,6 +20,9 @@ const tmp = 0.001;
  * 트럭 도착지로 들어올 트럭들을 생성하는 장소
  */
 export class TruckGenerator extends Facility {
+    public day: number;
+    public timeOfDay: number;
+
     private truckArrivalTimeDataList: Array<TruckArrivalData>;
     private nextTruckIndex: number;
     private arrivalTruckCount: number;
@@ -26,10 +34,18 @@ export class TruckGenerator extends Facility {
     private seaBulkRatio: number;
     private tankBulkRatio: number;
 
+    public get unitCount(): number {
+        return this.environment.unitList.length;
+    }
+
     public constructor(environment: Environment) {
         super(environment);
 
+        truckGenerator = this;
+
         this.name = 'TruckGenerator';
+        this.day = 0;
+        this.timeOfDay = 0;
         this.truckArrivalTimeDataList = new Array<TruckArrivalData>();
         this.nextTruckIndex = 0;
         this.arrivalTruckCount = 0;
@@ -81,28 +97,41 @@ export class TruckGenerator extends Facility {
      * @override
      */
     public onUpdate(): void {
-        
-        
-        if (this.nextTruckIndex < this.truckArrivalTimeDataList.length) {
-            let nextTruckArrivalTimeData = this.truckArrivalTimeDataList[this.nextTruckIndex];
+        this.timeOfDay += this.environment.deltaTime;
 
-            if (nextTruckArrivalTimeData.time < this.environment.elapsedTime) {
-                let truck: Truck;
-                if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_SEA_BULK) {
-                    truck = new SeaBulkTruck(this.environment);
-                } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_TANK_BULK) {
-                    truck = new TankBulkTruck(this.environment);
-                } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG) {
-                    truck = new DockTruck(this.environment, DockTruck.LOOSE_BAG);
-                } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_DOKE_PALLET) {
-                    truck = new DockTruck(this.environment, DockTruck.PALLET);
+        if (this.timeOfDay < 43200) {
+            if (this.nextTruckIndex < this.truckArrivalTimeDataList.length) {
+                let nextTruckArrivalTimeData = this.truckArrivalTimeDataList[this.nextTruckIndex];
+
+                if (nextTruckArrivalTimeData.time < this.timeOfDay) {
+                    let truck: Truck;
+
+                    if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_SEA_BULK) {
+                        truck = new SeaBulkTruck(this.environment);
+                    } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_TANK_BULK) {
+                        truck = new TankBulkTruck(this.environment);
+                    } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_DOKE_LOOSE_BAG) {
+                        truck = new DockTruck(this.environment, DockTruck.LOOSE_BAG);
+                    } else if (nextTruckArrivalTimeData.kind == TruckArrivalData.TRUCK_KIND_DOKE_PALLET) {
+                        truck = new DockTruck(this.environment, DockTruck.PALLET);
+                    }
+
+                    truck.register();
+                    this.addOutAgentQueue(0, truck);
+
+                    nextTruckArrivalTimeData.isArrived = true;
+                    this.nextTruckIndex++;
                 }
+            }
+        } else if (this.timeOfDay >= 43200) {
 
-                truck.register();
-                this.addOutAgentQueue(0, truck);
-
-                nextTruckArrivalTimeData.isArrived = true;
-                this.nextTruckIndex++;
+            if (this.day === 30) {
+                this.environment.timeScale = 0;
+            } else {
+                if (this.environment.unitList.length === 300) {
+                    this.timeOfDay = 0;
+                    this.setTruckArrivalDataList();
+                }
             }
         }
     }
@@ -111,7 +140,9 @@ export class TruckGenerator extends Facility {
      * 트럭 도착 데이터 설정
      */
     private setTruckArrivalDataList(): void {
-        
+        this.nextTruckIndex = 0;
+        this.day++;
+
         let duration = 12 * 60 * 60;
         let averageArrivalCount = 591;
         let averageDelay = duration / averageArrivalCount;
@@ -283,9 +314,13 @@ export class InGateway extends Facility {
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.transform.position = this.transform.position.clone();
+        if (truckGenerator && truckGenerator.timeOfDay < 43200) {
+            agent.transform.position = this.transform.position.clone();
 
-        this.startCoroutine(this.checkTruck(<Truck> agent));
+            this.startCoroutine(this.checkTruck(<Truck> agent));
+        } else {
+            agent.unregister();
+        }
     }
 
     /**
@@ -564,7 +599,7 @@ export class BulkProductLoadingPlace extends Facility {
     }
 
     private *loadProduct(truck: SeaBulkTruck): any {
-        yield* Wait.forSeconds(this.environment, 50 * 60 /* tmp*/);
+        yield* Wait.forSeconds(this.environment, 50 * 60);
 
         truck.state = Truck.STATE_LOADED;
         this.addOutAgentQueue(0, truck);
@@ -607,6 +642,7 @@ export class DockProductLoadingPlace extends Facility {
 
         let font = new Font(this.transform.clone());
         font.text = this.name;
+        font.size = 0.8;
         renderer.draw(font);
     }
 
@@ -640,21 +676,73 @@ export class DockProductLoadingPlace extends Facility {
  * 외부 목적지
  */
 export class ExternalDestination extends Facility {
-    private arrivedTruckCount: number;
+    private statistics: {
+        'tankBulk': Array<number>,
+        'seaBulk': Array<number>,
+        'looseDock': Array<number>,
+        'palletDock': Array<number>,
+        'total': Array<number>
+    };
 
     public constructor(environment: Environment) {
         super(environment);
 
         this.name = 'ExternalDestination';
-        this.arrivedTruckCount = 0;
+
+        this.statistics = {
+            'tankBulk': [0, 0, 0, 0],
+            'seaBulk': [0, 0, 0, 0],
+            'looseDock': [0, 0, 0, 0],
+            'palletDock': [0, 0, 0, 0],
+            'total': [0, 0, 0, 0]
+        };
     }
 
     /**
      * @override
      */
     public onAgentIn(agent: Agent): void {
-        agent.unregister();
-        this.arrivedTruckCount++;
+        if (agent instanceof Truck) {
+            let truck = <Truck> agent;
+
+            if (truck instanceof TankBulkTruck) {
+                let tank = <TankBulkTruck> truck;
+
+                this.statistics['tankBulk'][0]++;
+                this.statistics['tankBulk'][1] += tank.necessaryBrakeCount;
+                this.statistics['tankBulk'][2] += tank.excessedBrakeCount;
+                this.statistics['tankBulk'][3] += tank.necessaryBrakeCount + tank.excessedBrakeCount;
+            } else if (truck instanceof SeaBulkTruck) {
+                let sea = <SeaBulkTruck> truck;
+
+                this.statistics['seaBulk'][0]++;
+                this.statistics['seaBulk'][1] += sea.necessaryBrakeCount;
+                this.statistics['seaBulk'][2] += sea.excessedBrakeCount;
+                this.statistics['seaBulk'][3] += sea.necessaryBrakeCount + sea.excessedBrakeCount;
+            } else if (truck instanceof DockTruck) {
+                let dock = <DockTruck> truck;
+
+                if (dock.type === DockTruck.LOOSE_BAG) {
+                    this.statistics['looseDock'][0]++;
+                    this.statistics['looseDock'][1] += dock.necessaryBrakeCount;
+                    this.statistics['looseDock'][2] += dock.excessedBrakeCount;
+                    this.statistics['looseDock'][3] += dock.necessaryBrakeCount + dock.excessedBrakeCount;
+                } else if (dock.type === DockTruck.PALLET) {
+                    this.statistics['palletDock'][0]++;
+                    this.statistics['palletDock'][1] += dock.necessaryBrakeCount;
+                    this.statistics['palletDock'][2] += dock.excessedBrakeCount;
+                    this.statistics['palletDock'][3] += dock.necessaryBrakeCount + dock.excessedBrakeCount;
+                }
+            }
+
+            this.statistics['total'][0]++;
+            this.statistics['total'][1] += truck.necessaryBrakeCount;
+            this.statistics['total'][2] += truck.excessedBrakeCount;
+            this.statistics['total'][3] += truck.necessaryBrakeCount + truck.excessedBrakeCount;
+
+            truck.unregister();
+            
+        }
     }
 
     /**
@@ -675,10 +763,31 @@ export class ExternalDestination extends Facility {
         font.text = this.name;
         renderer.draw(font);
 
+        /*
         let font2 = new Font(this.transform.clone());
         font2.transform.position = Vector2.substract(font2.transform.position, new Vector2(0, 2));
-        font2.text = '도착한 트럭 수: ' + this.arrivedTruckCount;
+        font2.text = JSON.stringify(this.statistics);
         renderer.draw(font2);
+*/
+        let statisticsForTankBulk = new Font(this.transform.clone());
+        statisticsForTankBulk.transform.position = Vector2.substract(statisticsForTankBulk.transform.position, new Vector2(0, 2));
+        statisticsForTankBulk.text = '탱크 벌크| 도착 수: ' + this.statistics['tankBulk'][0] + '  | 필수 제동 수: ' + this.statistics['tankBulk'][1] + '  | 간섭 제동 수: ' + this.statistics['tankBulk'][2] + '  | 총 제동 수: ' + this.statistics['tankBulk'][3];
+        renderer.draw(statisticsForTankBulk);
+
+        let statisticsForSeaBulk = new Font(this.transform.clone());
+        statisticsForSeaBulk.transform.position = Vector2.substract(statisticsForSeaBulk.transform.position, new Vector2(0, 4));
+        statisticsForSeaBulk.text = '씨벌크| 도착 수: ' + this.statistics['seaBulk'][0] + '  | 필수 제동 수: ' + this.statistics['seaBulk'][1] + '  | 간섭 제동 수: ' + this.statistics['seaBulk'][2] + '  | 총 제동 수: ' + this.statistics['seaBulk'][3];
+        renderer.draw(statisticsForSeaBulk);
+
+        let statisticsForLooseDock = new Font(this.transform.clone());
+        statisticsForLooseDock.transform.position = Vector2.substract(statisticsForLooseDock.transform.position, new Vector2(0, 6));
+        statisticsForLooseDock.text = '루즈백| 도착 수: ' + this.statistics['looseDock'][0] + '  | 필수 제동 수: ' + this.statistics['looseDock'][1] + '  | 간섭 제동 수: ' + this.statistics['looseDock'][2] + '  | 총 제동 수: ' + this.statistics['looseDock'][3];
+        renderer.draw(statisticsForLooseDock);
+
+        let statisticsForPalletDock = new Font(this.transform.clone());
+        statisticsForPalletDock.transform.position = Vector2.substract(statisticsForPalletDock.transform.position, new Vector2(0, 8));
+        statisticsForPalletDock.text = '팔렛| 도착 수: ' + this.statistics['palletDock'][0] + '| 필수 제동 수: ' + this.statistics['palletDock'][1] + '| 간섭 제동 수: ' + this.statistics['palletDock'][2] + '| 총 제동 수: ' + this.statistics['palletDock'][3];
+        renderer.draw(statisticsForPalletDock);
     }
 
     /**
@@ -710,7 +819,7 @@ export class BulkIntersection extends Intersection {
         this.maxCapacity = 1;
         this.message = '0';
 
-        this.transform.scale = new Vector2(10, 10);
+        this.transform.scale = new Vector2(5, 5);
     }
 
     /**
@@ -839,10 +948,10 @@ export class BulkIntersectionControlTower extends ControlTower {
         this.truckCountList[2] = this.referenceFacilityList[10].agentCount - this.referenceFacilityList[10].maxCapacity;
         this.truckCountList[3] = this.referenceFacilityList[13].agentCount - this.referenceFacilityList[13].maxCapacity;
         
-        this.truckCountList[0] += this.referenceFacilityList[0].agentCount / 4;
-        this.truckCountList[1] += this.referenceFacilityList[4].agentCount / 4 + this.referenceFacilityList[1].agentCount / 3;
-        this.truckCountList[2] += this.referenceFacilityList[8].agentCount / 4 + this.referenceFacilityList[1].agentCount / 3 + this.referenceFacilityList[5].agentCount / 2;
-        this.truckCountList[3] += this.referenceFacilityList[12].agentCount / 4 + this.referenceFacilityList[1].agentCount / 3 + this.referenceFacilityList[5].agentCount / 2 + this.referenceFacilityList[9].agentCount;
+        this.truckCountList[0] += this.referenceFacilityList[0].agentCount;
+        this.truckCountList[1] += this.referenceFacilityList[4].agentCount + this.referenceFacilityList[1].agentCount / 3;
+        this.truckCountList[2] += this.referenceFacilityList[8].agentCount + this.referenceFacilityList[1].agentCount / 3 + this.referenceFacilityList[5].agentCount / 2;
+        this.truckCountList[3] += this.referenceFacilityList[12].agentCount + this.referenceFacilityList[1].agentCount / 3 + this.referenceFacilityList[5].agentCount / 2 + this.referenceFacilityList[9].agentCount;
 
     }
 
@@ -1007,7 +1116,7 @@ export class DockIntersectionControlTower extends ControlTower {
         }
 
         for (let i = 0; i < this.intersectionList.length - 1; i++) {
-            this.truckCountList[i] = this.referenceFacilityList[i * 4].agentCount - this.referenceFacilityList[i * 4].maxCapacity;
+            this.truckCountList[i] = this.referenceFacilityList[i * 4].agentCount - this.referenceFacilityList[i * 4].maxCapacity + this.referenceFacilityList[i * 4 + 2].agentCount;
         }
 
         for (let i = 0; i < this.intersectionList.length - 1; i++) {
@@ -1024,7 +1133,7 @@ export class DockIntersectionControlTower extends ControlTower {
         let intersectionNumber = this.getIntersectionNumber(intersection);
 
         if (port === 0) {
-            //intersection.priority = this.truckCountList[intersectionNumber];
+            intersection.message = '' + this.truckCountList[intersectionNumber];
 
             if (intersectionNumber === this.intersectionList.length - 1) {
                 return 0;
@@ -1037,10 +1146,8 @@ export class DockIntersectionControlTower extends ControlTower {
                         result = i;
                     }
                 }
-                let tmp = result === intersectionNumber ? 0 : 1;
-                intersection.message = '' + result + '|' + intersectionNumber + '|' + tmp;
                 
-                return tmp;
+                return result === intersectionNumber ? 0 : 1;
             }
         }
 
@@ -1058,13 +1165,25 @@ export abstract class Truck extends Agent {
     public static readonly STATE_NONE = 0;
     public static readonly STATE_LOADED = 1;
 
-    public currentRoadIndex: number = 0;
-    public state = 0;
+    private brakeCount: number;
+    protected _necessaryBrakeCount: number;
+
+    public state: number;
 
     protected vehicle: Vehicle;
 
     public get velocity(): number {
         return this.vehicle.velocity;
+    }
+
+    public get necessaryBrakeCount(): number {
+        return this._necessaryBrakeCount;
+    }
+
+    public get excessedBrakeCount(): number {
+        let tmp = this.brakeCount - this.necessaryBrakeCount;
+
+        return tmp < 0 ? 0 : tmp;
     }
 
     public constructor(environment: Environment) {
@@ -1074,7 +1193,14 @@ export abstract class Truck extends Agent {
 
         this.transform.scale = new Vector2(Truck.WIDTH, Truck.LENGTH);
         
+        this.brakeCount = 0;
+        this._necessaryBrakeCount = 0;
+        this.state = Truck.STATE_NONE;
+
         this.vehicle = new Vehicle();
+        this.vehicle.onBrake = () => {
+            this.brakeCount++;
+        };
         this.addComponent(this.vehicle);
     }
 
@@ -1113,6 +1239,7 @@ export class SeaBulkTruck extends Truck {
         super(environment);
         
         this.name = 'SeaBulkTruck';
+        this._necessaryBrakeCount = 9;
     }
 
     /**
@@ -1152,6 +1279,7 @@ export class TankBulkTruck extends Truck {
         super(environment);
         
         this.name = 'TankBulkTruck';
+        this._necessaryBrakeCount = 8;
     }
 
     /**
@@ -1195,6 +1323,7 @@ export class DockTruck extends Truck {
         super(environment);
         
         this.name = 'DockTruck';
+        this._necessaryBrakeCount = 6;
         this.type = type;
     }
 

@@ -1,5 +1,5 @@
-import { Agent, Road } from "./unit";
-import { Vector2 } from "./types";
+import { Agent, Road, Environment } from "./unit";
+import { Vector2, Wait } from "./types";
 
 export abstract class Component {
     public abstract do(agent: Agent): void;
@@ -37,6 +37,11 @@ export class Vehicle extends Component {
     public safetyDistance: number;
     public stopDistance: number;
     public brakingDistance: number;
+    public targetSpeed: number;
+
+    public onBrake: Function;
+
+    private isBraking: boolean;
 
     private _currentLaneIndex: number;
     private _currentWayIndex: number;
@@ -63,10 +68,14 @@ export class Vehicle extends Component {
 
         this.dynamic = new Dynamics();
         this.acceleration = 10;
-        this.deceleration = 50;
+        this.deceleration = 10;
         this.safetyDistance = 10;
-        this.stopDistance;
+        this.stopDistance = 0;
         this.brakingDistance = 0;
+        this.targetSpeed = 0;
+        this.onBrake = () => {};
+        this.isBraking = false;
+        
         this._currentLaneIndex = 0;
         this._currentWayIndex = 0;
         this._currentWayProgress = 0;
@@ -159,34 +168,38 @@ export class Vehicle extends Component {
         }
 
         this.brakingDistance = this.dynamic.velocity.sqrMagnitude / (2 * this.deceleration);
-        
-        let targetSpeed = 0;
 
-        if (this.stopDistance < this.brakingDistance) {
-            targetSpeed = 0;
+        if (this.stopDistance <= this.brakingDistance) {
+            this.targetSpeed = 0;
         } else {
-            targetSpeed = road.speedLimit;
+            this.targetSpeed = road.speedLimit;
         }
 
-        let sqrTargetSpeed = targetSpeed * targetSpeed;
+        let sqrTargetSpeed = this.targetSpeed * this.targetSpeed;
 
         if (this.dynamic.velocity.sqrMagnitude < sqrTargetSpeed) {
             this.dynamic.velocity = Vector2.add(this.dynamic.velocity, Vector2.multiply(agent.transform.forward(), this.acceleration * agent.environment.deltaTime));
 
             if (this.dynamic.velocity.sqrMagnitude > sqrTargetSpeed) {
-                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
+                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), this.targetSpeed);
             }
         } else if (this.dynamic.velocity.sqrMagnitude > sqrTargetSpeed) {
             let deltaVelocity = Vector2.multiply(agent.transform.forward(), this.deceleration * agent.environment.deltaTime);
 
             if (this.dynamic.velocity.sqrMagnitude <= deltaVelocity.sqrMagnitude) {
-                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
+                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), this.targetSpeed);
             } else {
+                if (!this.isBraking) {
+                    this.onBrake();
+                    this.isBraking = true;
+                    agent.startCoroutine(this.resetBrakingFlag(agent.environment, 5));
+                }
+
                 this.dynamic.velocity = Vector2.substract(this.dynamic.velocity, deltaVelocity);
             }
 
             if (this.dynamic.velocity.sqrMagnitude < sqrTargetSpeed) {
-                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), targetSpeed);
+                this.dynamic.velocity = Vector2.multiply(agent.transform.forward(), this.targetSpeed);
             }
         }
     }
@@ -206,5 +219,11 @@ export class Vehicle extends Component {
             }
             nextFacility.appendAgent(agent);
         }
+    }
+
+    private *resetBrakingFlag(environment: Environment, seconds: number): any {
+        yield *Wait.forSeconds(environment, seconds);
+
+        this.isBraking = false;
     }
 }
