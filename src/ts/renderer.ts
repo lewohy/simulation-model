@@ -34,7 +34,7 @@ export class Renderer {
         this.running = true;
 
         this.setupEvent();
-
+        
         this.interval = setInterval(() => {
             if (this.running) {
                 this.onUpdate();

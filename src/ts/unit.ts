@@ -171,7 +171,7 @@ export abstract class Unit {
      * 실행할 코루틴 추가
      * @param generator 
      */
-    protected startCoroutine(generator: Generator): void {
+    public startCoroutine(generator: Generator): void {
         this.coroutineList.push(generator);
     }
 }
@@ -380,7 +380,7 @@ export abstract class Agent extends Unit {
  * 길
  */
 export class Road extends Facility {
-    public static readonly DEFAULT_SPEED = 16.7;
+    public static readonly DEFAULT_SPEED = 5.6; // 20 km/h
     public static readonly LANE_WIDTH = 2;
 
     private readonly pointList: Array<Vector2>;

@@ -4,7 +4,9 @@ import { Environment } from "./unit";
  * 2차원 벡터
  */
 export class Vector2 {
-    public static readonly ZERO: Vector2 = new Vector2(0, 0);
+    public static get ZERO(): Vector2 {
+        return new Vector2(0, 0);
+    }
 
     public static add(a: Vector2, b: Vector2): Vector2 {
         return new Vector2(a.x + b.x, a.y + b.y);
