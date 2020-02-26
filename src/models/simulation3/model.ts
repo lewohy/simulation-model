@@ -4,7 +4,7 @@ import { Shape, Circle, Font, Quad, Path } from "../../ts/drawer";
 import { Vector2, TruckArrivalData, Wait } from "../../ts/types";
 import { Dynamics, Vehicle } from '../../ts/component';
 import { Model } from '../../ts/model';
-import { TruckGenerator, TruckDestination, WaitingPlace, InGateway, SeabulkTruckLinerPreparationPlace, WeightMesaurementPlace, DockProductLoadingPlace, OutGateway, ExternalDestination, BulkProductLoadingPlace, BulkIntersectionControlTower, BulkIntersection, DockIntersectionControlTower, DockIntersection } from './prop';
+import { TruckGenerator, TruckDestination, WaitingPlace, InGateway, SeabulkTruckLinerPreparationPlace, WeightMesaurementPlace, DockProductLoadingPlace, OutGateway, ExternalDestination, BulkProductLoadingPlace, BulkIntersectionControlTower, BulkIntersection, DockIntersectionControlTower, DockIntersection, DockTruck, Truck } from './prop';
 
 const MARGIN_RATIO = 1.5;
 
@@ -28,7 +28,7 @@ export class SimulationModel3 extends Model {
     public constructor(element: HTMLCanvasElement) {
         super(element);
 
-        this.environment.timeScale = 0.01;
+        this.environment.timeScale = 50;
 
         this.setup();
     }
@@ -51,7 +51,7 @@ export class SimulationModel3 extends Model {
 
         this.inGateway = new InGateway(this.environment);
         this.inGateway.name = '입구 게이트웨이';
-        this.inGateway.maxCapacity = 5 * MARGIN_RATIO;
+        this.inGateway.maxCapacity = Math.ceil(5 * MARGIN_RATIO);
         this.inGateway.transform.position = new Vector2(30, 0);
 
         this.linerPreparationPlace = new SeabulkTruckLinerPreparationPlace(this.environment);
@@ -124,7 +124,7 @@ export class SimulationModel3 extends Model {
 
         for (let i = 0; i < 34 * MARGIN_RATIO; i++) {
             let dplp = new DockProductLoadingPlace(this.environment);
-            dplp.name = i.toString();
+            dplp.name = '도크 ' + i;
             dplp.transform.scale = new Vector2(7, 3);
             dplp.transform.position = new Vector2(150 - 6 * i, 100);
 
